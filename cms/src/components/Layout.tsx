@@ -8,35 +8,31 @@ const Layout: React.FC = () => {
   const { user } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
 
-
   if (!user) {
     return null;
   }
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900 p-4">
-      {/* Desktop */}
       <div
-        className={`hidden lg:grid gap-4 items-start ${
-          collapsed ? "grid-cols-[4rem_1fr]" : "grid-cols-[16rem_1fr]"
+        className={`grid gap-4 items-start grid-cols-1 ${
+          collapsed ? "lg:grid-cols-[4rem_1fr]" : "lg:grid-cols-[16rem_1fr]"
         }`}
       >
-        <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((v) => !v)} />
+        {/* Sidebar only on large screens — keep a single Outlet so pages aren't mounted twice */}
+        <div className="hidden lg:block">
+          <Sidebar
+            collapsed={collapsed}
+            onToggle={() => setCollapsed((v) => !v)}
+          />
+        </div>
 
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 min-w-0">
           <Header />
           <main className="bg-white dark:bg-gray-900 min-h-[calc(100vh-4rem)] p-3 sm:p-4 md:p-6 lg:p-8">
             <Outlet />
           </main>
         </div>
-      </div>
-
-      {/* Mobile */}
-      <div className="lg:hidden">
-        <Header />
-        <main className="bg-white dark:bg-gray-900 min-h-[calc(100vh-4rem)] p-3 sm:p-4 md:p-6 lg:p-8">
-          <Outlet />
-        </main>
       </div>
     </div>
   );

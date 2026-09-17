@@ -254,7 +254,9 @@ const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
           const freightUsd = ph.freight_usd ?? ph.car?.freight_usd ?? null;
           return {
           id: ph.id,
-          car_id: ph.car_id,
+          car_id: ph.car_id ?? ph.cars?.[0]?.id ?? ph.car?.id ?? null,
+          car_ids: ph.cars?.map((c) => c.id) ||
+            (ph.car_id ? [ph.car_id] : ph.car?.id ? [ph.car.id] : []),
           purchase_amount: ph.purchase_amount,
           foreign_amount: sumBidSer(bid_price, ser_com),
           bdt_amount: ph.bdt_amount ?? null,
@@ -320,8 +322,8 @@ const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
       const freightUsd = mainHistory.freight_usd ?? mainHistory.car?.freight_usd ?? null;
 
       const initialFormData: CreatePurchaseHistoryData = {
-        car_ids: mainHistory.cars?.map(c => c.id) || (mainHistory.car_id ? [mainHistory.car_id] : []),
-        car_id: mainHistory.car_id ?? null,
+        car_ids: mainHistory.cars?.map(c => c.id) || (mainHistory.car_id ? [mainHistory.car_id] : mainHistory.car?.id ? [mainHistory.car.id] : []),
+        car_id: mainHistory.car_id ?? mainHistory.cars?.[0]?.id ?? mainHistory.car?.id ?? null,
         purchase_date: toInputDate(mainHistory.purchase_date),
         purchase_amount: mainHistory.purchase_amount,
         foreign_amount: sumBidSer(preBid, preSer),
@@ -492,6 +494,25 @@ const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
     }));
   };
 
+  /** Select a car for the current draft / single-record edit (keeps car_id + car_ids in sync). */
+  const handleSelectCar = (carId: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      car_id: carId,
+      car_ids: [carId],
+    }));
+    setIsCarDropdownOpen(false);
+    setCarSearchQuery("");
+  };
+
+  const handleClearSelectedCar = () => {
+    setFormData((prev) => ({
+      ...prev,
+      car_id: null,
+      car_ids: [],
+    }));
+  };
+
   const handleFileChange = (field: string, file: File | null) => {
     setFormData((prev) => ({
       ...prev,
@@ -655,19 +676,26 @@ const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
   };
 
   const handleAddEntry = () => {
-    if (!formData.car_id) {
+    const selectedCarId =
+      formData.car_id ??
+      (formData.car_ids && formData.car_ids.length > 0
+        ? formData.car_ids[0]
+        : null);
+
+    if (!selectedCarId) {
       return;
     }
 
     const duplicate = carEntries.some(
-      (e, i) => e.car_id === formData.car_id && i !== editingEntryIndex
+      (e, i) => e.car_id === selectedCarId && i !== editingEntryIndex
     );
     if (duplicate) {
       return;
     }
 
     const newEntry: CreatePurchaseHistoryData = {
-      car_id: formData.car_id,
+      car_id: selectedCarId,
+      car_ids: [selectedCarId],
       purchase_amount: formData.purchase_amount,
       foreign_amount: sumBidSer(formData.bid_price, formData.ser_com),
       bdt_amount: formData.bdt_amount,
@@ -747,18 +775,32 @@ const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
 
     if (carEntries.length > 0) {
       // If we have carEntries, we process them as a list
-      const bulkData = carEntries.map(entry => ({
-        ...sharedData,
-        ...entry
-      }));
+      const bulkData = carEntries.map((entry) => {
+        const carId =
+          entry.car_id ??
+          (entry.car_ids && entry.car_ids.length > 0 ? entry.car_ids[0] : null);
+        return {
+          ...sharedData,
+          ...entry,
+          car_id: carId,
+          car_ids: carId ? [carId] : entry.car_ids || [],
+        };
+      });
 
       // @ts-ignore
       onSubmit(bulkData);
     } else {
-      // Single item update/create
+      // Single item update/create — always sync car_ids from car_id for the API
+      const carId =
+        formData.car_id ??
+        (formData.car_ids && formData.car_ids.length > 0
+          ? formData.car_ids[0]
+          : null);
       onSubmit({
         ...formData,
-        ...sharedData
+        ...sharedData,
+        car_id: carId,
+        car_ids: carId ? [carId] : formData.car_ids || [],
       });
     }
   };
@@ -1028,8 +1070,8 @@ const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
             <div
               className={
                 isPage
-                  ? "rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm overflow-hidden ring-1 ring-slate-100/80 dark:ring-slate-800"
-                  : "rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden"
+                  ? "rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm overflow-visible ring-1 ring-slate-100/80 dark:ring-slate-800"
+                  : "rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-visible"
               }
             >
               <div className="px-5 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
@@ -1189,11 +1231,7 @@ const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
                     return (
                       <div
                         key={item.id}
-                        onClick={() => {
-                          handleInputChange("car_id", item.car_id);
-                          handleInputChange("car_ids", [item.car_id]);
-                          // Optionally pre-fill other fields from car if needed
-                        }}
+                        onClick={() => handleSelectCar(item.car_id)}
                         className={`p-4 rounded-xl border bg-white dark:bg-gray-800 cursor-pointer transition-all hover:shadow-md dark:border-gray-600 ${isSelected ? 'border-primary-500 ring-2 ring-primary-100 dark:ring-primary-900/40' : 'border-gray-200 dark:border-gray-600'}`}
                       >
                         <div className="font-bold text-gray-900">{item.car.make} {item.car.model}</div>
@@ -1206,16 +1244,19 @@ const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
               </div>
             )}
 
-            {/* Add Car to Purchase */}
-            {mode === "create" && showDraftCarForm && (
+            {/* Add Car to Purchase — create draft, or single-record update car change */}
+            {((mode === "create" && showDraftCarForm) ||
+              (mode === "update" && !Array.isArray(purchaseHistory))) && (
               <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
                 <div className="flex items-start justify-between gap-3">
                   <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1 flex items-center gap-2">
-                    <Plus className="w-5 h-5 text-blue-600 dark:text-blue-400" /> Add Car to Purchase
+                    <Plus className="w-5 h-5 text-blue-600 dark:text-blue-400" />{" "}
+                    {mode === "create" ? "Add Car to Purchase" : "Select Car"}
                   </h3>
-                  {(editingEntryIndex === null &&
+                  {mode === "create" &&
+                    editingEntryIndex === null &&
                     ((formData.car_id != null && formData.car_id !== 0) ||
-                      (formData.car_ids && formData.car_ids.length > 0))) && (
+                      (formData.car_ids && formData.car_ids.length > 0)) && (
                     <button
                       type="button"
                       onClick={handleMinimizeDraft}
@@ -1227,35 +1268,59 @@ const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
                     </button>
                   )}
                 </div>
-                <p className="text-xs text-gray-600 dark:text-gray-400 mb-5">
-                  Complete pricing and documents below, then click <span className="font-medium text-gray-800 dark:text-gray-200">Add Car to List</span> under Document Attachments.
-                </p>
+                {mode === "create" && (
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-5">
+                    Complete pricing and documents below, then click <span className="font-medium text-gray-800 dark:text-gray-200">Add Car to List</span> under Document Attachments.
+                  </p>
+                )}
+                {mode === "update" && (
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-5">
+                    Search and select the vehicle linked to this purchase record.
+                  </p>
+                )}
 
-                {/* Car selection + Purchase Date + H.S Code — one row on lg+ */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
-                  <div className="relative min-w-0">
+                {/* Car selection + Purchase Date + H.S Code — one row on lg+ (create); update uses car only here */}
+                <div
+                  className={
+                    mode === "create"
+                      ? "grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6"
+                      : "grid grid-cols-1 gap-4"
+                  }
+                >
+                  <div className="relative min-w-0 z-30">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Select Car to Add
+                      {mode === "create" ? "Select Car to Add" : "Car"}
                     </label>
 
                     {/* Selected Car Display */}
                     <div className="flex flex-wrap gap-2 mb-2">
-                      {(formData.car_id ? [formData.car_id] : (formData.car_ids || [])).map(id => {
-                        let car: any = cars.find(c => c.id === id);
+                      {(formData.car_id
+                        ? [formData.car_id]
+                        : formData.car_ids || []
+                      ).map((id) => {
+                        let car: any = cars.find((c) => c.id === id);
                         if (!car && mainHistory?.cars) {
                           car = mainHistory.cars.find((c: any) => c.id === id);
+                        }
+                        if (!car && mainHistory?.car?.id === id) {
+                          car = mainHistory.car;
                         }
                         if (!car) return null;
 
                         return (
-                          <div key={id} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 rounded-lg text-sm font-medium flex items-center justify-between w-full border border-gray-200 dark:border-gray-600">
-                            <span>{car.make} {car.model} — <span className="text-gray-500 dark:text-gray-400 font-normal">{car.chassis_no_full || car.chassis_no_masked}</span></span>
+                          <div
+                            key={id}
+                            className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 rounded-lg text-sm font-medium flex items-center justify-between w-full border border-gray-200 dark:border-gray-600"
+                          >
+                            <span>
+                              {car.make} {car.model} —{" "}
+                              <span className="text-gray-500 dark:text-gray-400 font-normal">
+                                {car.chassis_no_full || car.chassis_no_masked}
+                              </span>
+                            </span>
                             <button
                               type="button"
-                              onClick={() => {
-                                handleInputChange("car_id", null);
-                                handleInputChange("car_ids", []);
-                              }}
+                              onClick={handleClearSelectedCar}
                               className="text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300"
                             >
                               <X className="w-5 h-5" />
@@ -1282,70 +1347,102 @@ const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
                         />
 
                         {isCarDropdownOpen && (
-                          <div className="absolute z-20 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-xl max-h-60 overflow-y-auto">
-                            {loadingCars ? (
-                              <div className="p-4 text-center text-gray-500 text-sm">Loading cars...</div>
-                            ) : (
-                              <>
-                                {cars
-                                  .filter(car => {
-                                    const searchStr = `${car.make} ${car.model} ${car.chassis_no_full || ""} ${car.chassis_no_masked || ""}`.toLowerCase();
-                                    return searchStr.includes(carSearchQuery.toLowerCase());
-                                  })
-                                  .map(car => {
-                                    const isAlreadyAdded = carEntries.some(
-                                      (e, i) => e.car_id === car.id && i !== editingEntryIndex
-                                    );
-                                    if (isAlreadyAdded) return null;
-                                    return (
-                                      <div
-                                        key={car.id}
-                                        onClick={() => {
-                                          handleInputChange("car_id", car.id);
-                                          handleInputChange("car_ids", [car.id]);
-                                          setIsCarDropdownOpen(false);
-                                          setCarSearchQuery("");
-                                        }}
-                                        className="px-4 py-2 cursor-pointer flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/80"
-                                      >
-                                        <div className="flex flex-col">
-                                          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{car.make} {car.model}</span>
-                                          <span className="text-xs text-gray-500 dark:text-gray-400">{car.chassis_no_full || car.chassis_no_masked}</span>
+                          <>
+                            <div
+                              className="fixed inset-0 z-10"
+                              onClick={() => setIsCarDropdownOpen(false)}
+                              aria-hidden
+                            />
+                            <div className="absolute z-20 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-xl max-h-60 overflow-y-auto">
+                              {loadingCars ? (
+                                <div className="p-4 text-center text-gray-500 text-sm">
+                                  Loading cars...
+                                </div>
+                              ) : (
+                                <>
+                                  {cars
+                                    .filter((car) => {
+                                      const searchStr =
+                                        `${car.make} ${car.model} ${car.chassis_no_full || ""} ${car.chassis_no_masked || ""}`.toLowerCase();
+                                      return searchStr.includes(
+                                        carSearchQuery.toLowerCase()
+                                      );
+                                    })
+                                    .map((car) => {
+                                      const isAlreadyAdded =
+                                        mode === "create" &&
+                                        carEntries.some(
+                                          (e, i) =>
+                                            e.car_id === car.id &&
+                                            i !== editingEntryIndex
+                                        );
+                                      if (isAlreadyAdded) return null;
+                                      return (
+                                        <div
+                                          key={car.id}
+                                          onClick={() => handleSelectCar(car.id)}
+                                          className="px-4 py-2 cursor-pointer flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/80"
+                                        >
+                                          <div className="flex flex-col">
+                                            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                              {car.make} {car.model}
+                                            </span>
+                                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                                              {car.chassis_no_full ||
+                                                car.chassis_no_masked}
+                                            </span>
+                                          </div>
                                         </div>
-                                      </div>
-                                    );
-                                  })}
-                              </>
-                            )}
-                          </div>
+                                      );
+                                    })}
+                                  {cars.length === 0 && !loadingCars && (
+                                    <div className="p-4 text-center text-gray-500 text-sm">
+                                      No cars available
+                                    </div>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          </>
                         )}
                       </div>
                     )}
                   </div>
 
-                  <div className="min-w-0">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Purchase Date
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.purchase_date || ""}
-                      onChange={(e) => handleInputChange("purchase_date", e.target.value || null)}
-                      className="w-full min-w-0 px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-800 dark:border-gray-600"
-                    />
-                  </div>
+                  {mode === "create" && (
+                    <>
+                      <div className="min-w-0">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Purchase Date
+                        </label>
+                        <input
+                          type="date"
+                          value={formData.purchase_date || ""}
+                          onChange={(e) =>
+                            handleInputChange(
+                              "purchase_date",
+                              e.target.value || null
+                            )
+                          }
+                          className="w-full min-w-0 px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-800 dark:border-gray-600"
+                        />
+                      </div>
 
-                  <div className="min-w-0">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      H.S Code
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.hs_code || ""}
-                      onChange={(e) => handleInputChange("hs_code", e.target.value || null)}
-                      className="w-full min-w-0 px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-800 dark:border-gray-600"
-                    />
-                  </div>
+                      <div className="min-w-0">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          H.S Code
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.hs_code || ""}
+                          onChange={(e) =>
+                            handleInputChange("hs_code", e.target.value || null)
+                          }
+                          className="w-full min-w-0 px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-800 dark:border-gray-600"
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             )}

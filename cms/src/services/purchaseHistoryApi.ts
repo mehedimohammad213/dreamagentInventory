@@ -145,6 +145,16 @@ class PurchaseHistoryApi {
     if (data.car_id !== undefined && data.car_id !== null) {
       formData.append("car_id", data.car_id.toString());
     }
+    // Prefer explicit car_ids; otherwise derive from car_id so pivot sync always runs
+    const carIdsToSend =
+      data.car_ids !== undefined && data.car_ids !== null
+        ? data.car_ids
+        : data.car_id != null
+          ? [data.car_id]
+          : null;
+    if (carIdsToSend !== null) {
+      formData.append("car_ids", JSON.stringify(carIdsToSend));
+    }
     if (data.purchase_date)
       formData.append("purchase_date", data.purchase_date);
     if (data.purchase_amount !== undefined && data.purchase_amount !== null) {
@@ -178,9 +188,6 @@ class PurchaseHistoryApi {
       formData.append("lc_bank_branch_name", data.lc_bank_branch_name);
     if (data.lc_bank_branch_address)
       formData.append("lc_bank_branch_address", data.lc_bank_branch_address);
-    if (data.car_ids !== undefined && data.car_ids !== null) {
-      formData.append("car_ids", JSON.stringify(data.car_ids));
-    }
     if (data.total_units_per_lc)
       formData.append("total_units_per_lc", data.total_units_per_lc);
     if (data.hs_code !== undefined && data.hs_code !== null && data.hs_code !== "") {
@@ -284,8 +291,14 @@ class PurchaseHistoryApi {
           payload[field] = data[field] === undefined ? null : data[field];
         }
       });
-      if ("car_ids" in data) {
-        payload.car_ids = JSON.stringify(data.car_ids);
+      const carIdsToSend =
+        "car_ids" in data
+          ? data.car_ids
+          : data.car_id != null
+            ? [data.car_id]
+            : undefined;
+      if (carIdsToSend !== undefined) {
+        payload.car_ids = JSON.stringify(carIdsToSend);
       }
 
       const response = await apiClient.put(`/purchase-history/${id}`, payload);
@@ -380,8 +393,14 @@ class PurchaseHistoryApi {
         data.freight_usd !== null ? data.freight_usd.toString() : ""
       );
     }
-    if (data.car_ids !== undefined) {
-      formData.append("car_ids", JSON.stringify(data.car_ids || []));
+    const carIdsForUpdate =
+      data.car_ids !== undefined
+        ? data.car_ids || []
+        : data.car_id != null
+          ? [data.car_id]
+          : undefined;
+    if (carIdsForUpdate !== undefined) {
+      formData.append("car_ids", JSON.stringify(carIdsForUpdate));
     }
 
     // Add PDF files

@@ -100,6 +100,7 @@ async function hydratePurchaseHistory(record, { includeCars = true } = {}) {
   if (includeCars) {
     await record.loadCars();
     record.car = record.cars?.[0] || null;
+    record.car_id = record.car?.id ?? null;
   }
   return record;
 }
@@ -228,7 +229,11 @@ export async function createPurchaseHistory(body, files) {
   const { ok, errors } = validatePurchasePayload(body);
   if (!ok) throw new ValidationError(errors, 'Validation error');
 
-  const carIds = parseCarIds(body.car_ids);
+  let carIds = parseCarIds(body.car_ids);
+  if (!carIds?.length && isFilled(body.car_id)) {
+    const singleId = toInt(body.car_id);
+    if (singleId != null) carIds = [singleId];
+  }
   if (carIds) {
     const carCheck = await validateCarIds(carIds);
     if (!carCheck.ok) throw new ValidationError(carCheck.errors, 'Validation error');
@@ -240,9 +245,8 @@ export async function createPurchaseHistory(body, files) {
 
   const purchaseHistory = await withTransaction(async (client) => {
     const created = await PurchaseHistory.create(data, client);
-    if (isFilled(body.car_ids)) {
-      const ids = carIds || [];
-      await created.syncCars(ids, client);
+    if (carIds?.length) {
+      await created.syncCars(carIds, client);
     }
     return created;
   });
@@ -277,8 +281,15 @@ export async function updatePurchaseHistory(id, body, files) {
   const { ok, errors } = validatePurchasePayload(body);
   if (!ok) throw new ValidationError(errors, 'Validation error');
 
-  if (Object.prototype.hasOwnProperty.call(body, 'car_ids')) {
-    const carIds = parseCarIds(body.car_ids) || [];
+  if (
+    Object.prototype.hasOwnProperty.call(body, 'car_ids') ||
+    Object.prototype.hasOwnProperty.call(body, 'car_id')
+  ) {
+    let carIds = parseCarIds(body.car_ids) || [];
+    if (!carIds.length && isFilled(body.car_id)) {
+      const singleId = toInt(body.car_id);
+      if (singleId != null) carIds = [singleId];
+    }
     const carCheck = await validateCarIds(carIds);
     if (!carCheck.ok) throw new ValidationError(carCheck.errors, 'Validation error');
   }
@@ -290,8 +301,15 @@ export async function updatePurchaseHistory(id, body, files) {
   await withTransaction(async (client) => {
     await purchaseHistory.update(data, client);
 
-    if (Object.prototype.hasOwnProperty.call(body, 'car_ids')) {
-      const carIds = parseCarIds(body.car_ids) || [];
+    if (
+      Object.prototype.hasOwnProperty.call(body, 'car_ids') ||
+      Object.prototype.hasOwnProperty.call(body, 'car_id')
+    ) {
+      let carIds = parseCarIds(body.car_ids) || [];
+      if (!carIds.length && isFilled(body.car_id)) {
+        const singleId = toInt(body.car_id);
+        if (singleId != null) carIds = [singleId];
+      }
       await purchaseHistory.syncCars(carIds, client);
     }
   });
