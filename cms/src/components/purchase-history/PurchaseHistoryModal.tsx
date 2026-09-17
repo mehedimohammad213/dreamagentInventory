@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   X,
   Upload,
@@ -168,6 +168,8 @@ const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
   const [loadingCart, setLoadingCart] = useState(false);
   /** Avoid clearing manual Total Units when list was never used (create flow). */
   const hadCarEntriesInCreateRef = useRef(false);
+  /** True while intentionally clearing/prefilling draft so calculator does not restore stale amounts. */
+  const suppressPurchaseCalcRef = useRef(false);
 
   useEffect(() => {
     if (effectiveOpen) {
@@ -275,8 +277,11 @@ const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
         };
         });
         setCarEntries(entries);
+        setDraftFormExpanded(false);
+        setEditingEntryIndex(null);
       } else {
         setCarEntries([]);
+        setDraftFormExpanded(true);
       }
 
       setDollarToBdtRate(
@@ -285,7 +290,9 @@ const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
           : ""
       );
 
-      setCurrencyType("yen");
+      const loadedCurrency: "dollar" | "yen" =
+        mainHistory.currency_type === "dollar" ? "dollar" : "yen";
+      setCurrencyType(loadedCurrency);
 
       const { bid_price: rateBid, ser_com: rateSer } = resolveBidSerFromPh(mainHistory);
       const yenBasis =
@@ -294,8 +301,11 @@ const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
           ? Number(mainHistory.foreign_amount)
           : null);
 
+      // Prevent calculator from wiping hydrated amounts before rate fields settle
+      suppressPurchaseCalcRef.current = true;
+
       if (
-        mainHistory.currency_type === "yen" &&
+        loadedCurrency === "yen" &&
         yenBasis &&
         yenBasis > 0 &&
         mainHistory.purchase_amount
@@ -310,10 +320,22 @@ const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
           const yenPerDollar = yenAmount / calculatedDollar;
           setYenToDollarRate(yenPerDollar.toString());
           setIntermediateDollar(calculatedDollar.toString());
+        } else {
+          setYenToDollarRate("");
+          setIntermediateDollar("");
         }
+      } else {
+        setYenToDollarRate("");
+        setIntermediateDollar("");
       }
 
       const { bid_price: preBid, ser_com: preSer } = resolveBidSerFromPh(mainHistory);
+      const loadedForeign = sumBidSer(preBid, preSer);
+      setForeignAmount(
+        loadedForeign != null && !Number.isNaN(Number(loadedForeign))
+          ? String(loadedForeign)
+          : ""
+      );
 
       const hsCode = mainHistory.hs_code ?? mainHistory.car?.code ?? null;
       const priceAmount = mainHistory.price_amount ?? mainHistory.car?.price_amount ?? null;
@@ -326,9 +348,9 @@ const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
         car_id: mainHistory.car_id ?? mainHistory.cars?.[0]?.id ?? mainHistory.car?.id ?? null,
         purchase_date: toInputDate(mainHistory.purchase_date),
         purchase_amount: mainHistory.purchase_amount,
-        foreign_amount: sumBidSer(preBid, preSer),
+        foreign_amount: loadedForeign,
         bdt_amount: mainHistory.bdt_amount ?? null,
-        currency_type: "yen",
+        currency_type: loadedCurrency,
         govt_duty: mainHistory.govt_duty || null,
         cnf_amount: mainHistory.cnf_amount || null,
         miscellaneous: mainHistory.miscellaneous || null,
@@ -396,8 +418,9 @@ const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
         govt_duty: null,
         cnf_amount: null,
         miscellaneous: null,
-        bid_price: p?.bid_price ?? null,
-        ser_com: p?.ser_com ?? null,
+        // Do not copy previous car financials — only LC header fields
+        bid_price: null,
+        ser_com: null,
         lc_date: p ? toInputDate(p.lc_date) : null,
         lc_number: p?.lc_number ?? null,
         lc_bank_name: p?.lc_bank_name ?? null,
@@ -433,6 +456,7 @@ const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
       setCarEntries([]);
       setEditingEntryIndex(null);
       hadCarEntriesInCreateRef.current = false;
+      suppressPurchaseCalcRef.current = true;
     }
   }, [purchaseHistory, mode, effectiveOpen, lcPrefillForCreate]);
 
@@ -449,6 +473,11 @@ const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
 
   // Calculate purchase_amount with two-step conversion for Yen
   useEffect(() => {
+    if (suppressPurchaseCalcRef.current) {
+      suppressPurchaseCalcRef.current = false;
+      return;
+    }
+
     const foreign = parseFloat(foreignAmount) || 0;
     let finalAmount = 0;
     let dollarEquivalent = foreign;
@@ -467,18 +496,41 @@ const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
     const dollarToBdt = parseFloat(dollarToBdtRate) || 0;
     finalAmount = dollarEquivalent * dollarToBdt;
 
+    const hasForeign = foreignAmount !== "";
+    const hasBdtRate = dollarToBdtRate !== "";
+    const inputsEmpty =
+      !hasForeign &&
+      !hasBdtRate &&
+      (currencyType === "dollar" || yenToDollarRate === "");
+
     setFormData((prev) => {
-      // PROMPT FIX: Don't let the calculator overwrite existing purchase_amount with null/0
-      // if inputs are empty during update prefill.
-      if (mode === "update" && !foreignAmount && !dollarToBdtRate) {
-        return prev;
+      // Keep hydrated purchase_amount only while update form rates are still empty
+      if (mode === "update" && inputsEmpty && prev.purchase_amount != null) {
+        return { ...prev, currency_type: currencyType };
+      }
+
+      // Mid-hydrate: foreign amount effect may lag one tick behind bid/ser + rates
+      if (mode === "update" && !hasForeign && prev.purchase_amount != null) {
+        return {
+          ...prev,
+          bdt_amount:
+            hasBdtRate && !Number.isNaN(parseFloat(dollarToBdtRate))
+              ? parseFloat(dollarToBdtRate)
+              : prev.bdt_amount,
+          currency_type: currencyType,
+        };
       }
 
       return {
         ...prev,
-        purchase_amount: finalAmount > 0 ? finalAmount : prev.purchase_amount,
-        foreign_amount: !Number.isNaN(foreign) && foreignAmount !== "" ? foreign : prev.foreign_amount,
-        bdt_amount: !Number.isNaN(parseFloat(dollarToBdtRate)) && dollarToBdtRate !== "" ? parseFloat(dollarToBdtRate) : prev.bdt_amount,
+        // When inputs are cleared, null out — do not keep previous car's amounts
+        purchase_amount: finalAmount > 0 ? finalAmount : null,
+        foreign_amount:
+          hasForeign && !Number.isNaN(foreign) ? foreign : null,
+        bdt_amount:
+          hasBdtRate && !Number.isNaN(parseFloat(dollarToBdtRate))
+            ? parseFloat(dollarToBdtRate)
+            : null,
         currency_type: currencyType,
       };
     });
@@ -521,6 +573,8 @@ const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
   };
 
   const clearCarDraftFields = () => {
+    // Prevent calculator from restoring previous car amounts on the next effect tick
+    suppressPurchaseCalcRef.current = true;
     setFormData((prev) => ({
       ...prev,
       car_id: null,
@@ -534,17 +588,7 @@ const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
       miscellaneous: null,
       bid_price: null,
       ser_com: null,
-      bill_of_lading: null,
-      invoice_number: null,
-      export_certificate: null,
-      export_certificate_translated: null,
-      bill_of_exchange_amount: null,
-      custom_duty_copy_3pages: null,
-      cheque_copy: null,
-      certificate: null,
-      custom_one: null,
-      custom_two: null,
-      custom_three: null,
+      // Keep LC-shared PDF fields; clear per-car financials / selection only
       hs_code: null,
       price_amount: null,
       price_basis: null,
@@ -555,10 +599,12 @@ const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
     setYenToDollarRate("");
     setDollarToBdtRate("");
     setIntermediateDollar("");
-    setExistingFiles({});
   };
 
   const applyEntryToDraftForm = (entry: CreatePurchaseHistoryData) => {
+    // Avoid calculator wiping entry amounts before rate fields hydrate
+    suppressPurchaseCalcRef.current = true;
+
     const ct: "dollar" | "yen" =
       entry.currency_type === "dollar" ? "dollar" : "yen";
     setCurrencyType(ct);
@@ -636,6 +682,36 @@ const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
     }
 
     setExistingFiles({});
+
+    // Bulk edit: restore PDF paths from the matching purchase history row
+    if (
+      Array.isArray(purchaseHistory) &&
+      (entry as CreatePurchaseHistoryData & { id?: number }).id != null
+    ) {
+      const entryId = (entry as CreatePurchaseHistoryData & { id?: number }).id;
+      const ph = purchaseHistory.find((p) => p.id === entryId);
+      if (ph) {
+        const pdfFieldKeys = [
+          "bill_of_lading",
+          "invoice_number",
+          "export_certificate",
+          "export_certificate_translated",
+          "bill_of_exchange_amount",
+          "custom_duty_copy_3pages",
+          "cheque_copy",
+          "certificate",
+          "custom_one",
+          "custom_two",
+          "custom_three",
+        ] as const;
+        const files: Record<string, string> = {};
+        pdfFieldKeys.forEach((field) => {
+          const value = ph[field];
+          if (value) files[field] = value;
+        });
+        setExistingFiles(files);
+      }
+    }
   };
 
   const handleStartEditEntry = (index: number) => {
@@ -675,7 +751,55 @@ const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
     }
   };
 
-  const handleAddEntry = () => {
+  const buildEntryFromForm = (
+    selectedCarId: number,
+    existing?: CreatePurchaseHistoryData & { id?: number }
+  ): CreatePurchaseHistoryData & { id?: number } => ({
+    ...(existing?.id != null ? { id: existing.id } : {}),
+    car_id: selectedCarId,
+    car_ids: [selectedCarId],
+    purchase_amount: formData.purchase_amount,
+    foreign_amount: sumBidSer(formData.bid_price, formData.ser_com),
+    bdt_amount: formData.bdt_amount,
+    currency_type: currencyType,
+    govt_duty: formData.govt_duty,
+    cnf_amount: formData.cnf_amount,
+    miscellaneous: formData.miscellaneous,
+    bid_price: formData.bid_price ?? null,
+    ser_com: formData.ser_com ?? null,
+    purchase_date: formData.purchase_date,
+    bill_of_lading: formData.bill_of_lading ?? existing?.bill_of_lading ?? null,
+    invoice_number: formData.invoice_number ?? existing?.invoice_number ?? null,
+    export_certificate:
+      formData.export_certificate ?? existing?.export_certificate ?? null,
+    export_certificate_translated:
+      formData.export_certificate_translated ??
+      existing?.export_certificate_translated ??
+      null,
+    bill_of_exchange_amount:
+      formData.bill_of_exchange_amount ??
+      existing?.bill_of_exchange_amount ??
+      null,
+    custom_duty_copy_3pages:
+      formData.custom_duty_copy_3pages ??
+      existing?.custom_duty_copy_3pages ??
+      null,
+    cheque_copy: formData.cheque_copy ?? existing?.cheque_copy ?? null,
+    certificate: formData.certificate ?? existing?.certificate ?? null,
+    custom_one: formData.custom_one ?? existing?.custom_one ?? null,
+    custom_two: formData.custom_two ?? existing?.custom_two ?? null,
+    custom_three: formData.custom_three ?? existing?.custom_three ?? null,
+    hs_code: formData.hs_code,
+    price_amount: formData.price_amount,
+    price_basis: formData.price_basis,
+    fob_value_usd: formData.fob_value_usd,
+    freight_usd: formData.freight_usd,
+  });
+
+  /** Commit open draft into carEntries; returns updated list or null if nothing to commit. */
+  const commitDraftToEntries = (
+    entries: CreatePurchaseHistoryData[]
+  ): CreatePurchaseHistoryData[] | null => {
     const selectedCarId =
       formData.car_id ??
       (formData.car_ids && formData.car_ids.length > 0
@@ -683,58 +807,39 @@ const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
         : null);
 
     if (!selectedCarId) {
-      return;
+      return null;
     }
 
-    const duplicate = carEntries.some(
+    const duplicate = entries.some(
       (e, i) => e.car_id === selectedCarId && i !== editingEntryIndex
     );
     if (duplicate) {
+      return null;
+    }
+
+    const existing =
+      editingEntryIndex !== null
+        ? (entries[editingEntryIndex] as CreatePurchaseHistoryData & {
+            id?: number;
+          })
+        : undefined;
+    const newEntry = buildEntryFromForm(selectedCarId, existing);
+
+    if (editingEntryIndex !== null) {
+      return entries.map((e, i) => (i === editingEntryIndex ? newEntry : e));
+    }
+    return [...entries, newEntry];
+  };
+
+  const handleAddEntry = () => {
+    const next = commitDraftToEntries(carEntries);
+    if (!next) {
       return;
     }
 
-    const newEntry: CreatePurchaseHistoryData = {
-      car_id: selectedCarId,
-      car_ids: [selectedCarId],
-      purchase_amount: formData.purchase_amount,
-      foreign_amount: sumBidSer(formData.bid_price, formData.ser_com),
-      bdt_amount: formData.bdt_amount,
-      currency_type: currencyType,
-      govt_duty: formData.govt_duty,
-      cnf_amount: formData.cnf_amount,
-      miscellaneous: formData.miscellaneous,
-      bid_price: formData.bid_price ?? null,
-      ser_com: formData.ser_com ?? null,
-      purchase_date: formData.purchase_date,
-
-      bill_of_lading: formData.bill_of_lading,
-      invoice_number: formData.invoice_number,
-      export_certificate: formData.export_certificate,
-      export_certificate_translated: formData.export_certificate_translated,
-      bill_of_exchange_amount: formData.bill_of_exchange_amount,
-      custom_duty_copy_3pages: formData.custom_duty_copy_3pages,
-      cheque_copy: formData.cheque_copy,
-      certificate: formData.certificate,
-      custom_one: formData.custom_one,
-      custom_two: formData.custom_two,
-      custom_three: formData.custom_three,
-      hs_code: formData.hs_code,
-      price_amount: formData.price_amount,
-      price_basis: formData.price_basis,
-      fob_value_usd: formData.fob_value_usd,
-      freight_usd: formData.freight_usd,
-    };
-
-    if (editingEntryIndex !== null) {
-      setCarEntries((prev) =>
-        prev.map((e, i) => (i === editingEntryIndex ? newEntry : e))
-      );
-      setEditingEntryIndex(null);
-    } else {
-      setCarEntries((prev) => [...prev, newEntry]);
-    }
+    setCarEntries(next);
+    setEditingEntryIndex(null);
     setDraftFormExpanded(false);
-
     clearCarDraftFields();
   };
 
@@ -773,9 +878,24 @@ const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
       custom_three: formData.custom_three,
     };
 
-    if (carEntries.length > 0) {
-      // If we have carEntries, we process them as a list
-      const bulkData = carEntries.map((entry) => {
+    // Commit open draft (new or edited car) so updates are not lost on submit
+    let entriesForSubmit = carEntries;
+    const draftIsOpen =
+      (mode === "create" || Array.isArray(purchaseHistory)) &&
+      (carEntries.length === 0 || draftFormExpanded);
+    if (draftIsOpen) {
+      const committed = commitDraftToEntries(carEntries);
+      if (committed) {
+        entriesForSubmit = committed;
+        setCarEntries(committed);
+        setEditingEntryIndex(null);
+        setDraftFormExpanded(false);
+        clearCarDraftFields();
+      }
+    }
+
+    if (entriesForSubmit.length > 0) {
+      const bulkData = entriesForSubmit.map((entry) => {
         const carId =
           entry.car_id ??
           (entry.car_ids && entry.car_ids.length > 0 ? entry.car_ids[0] : null);
@@ -941,26 +1061,33 @@ const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
 
   const isPage = variant === "page";
 
-  /** Single record or create: show vehicle/pricing/docs block. Bulk array update uses LC only here. */
+  /** Single record / create / bulk list: show vehicle section when needed. */
   const showCarPurchaseSection =
-    mode === "create" || !Array.isArray(purchaseHistory);
+    mode === "create" ||
+    !Array.isArray(purchaseHistory) ||
+    carEntries.length > 0;
 
-  /** Create mode: hide the big draft (car + pricing + docs) after adding to list until user adds another. */
+  /** Whether the car + pricing + docs draft block is visible. */
   const showDraftCarForm =
-    mode !== "create" || carEntries.length === 0 || draftFormExpanded;
-
-  const showDocumentAttachmentsSection =
     mode === "create"
-      ? showDraftCarForm
-      : !Array.isArray(purchaseHistory);
+      ? carEntries.length === 0 || draftFormExpanded
+      : Array.isArray(purchaseHistory)
+        ? draftFormExpanded || editingEntryIndex !== null
+        : true;
 
-  /** Same collapse as Add Car to Purchase + Document Attachments in create mode. */
-  const showCurrentEntryDetailsSection =
-    mode === "create"
-      ? showDraftCarForm
-      : !Array.isArray(purchaseHistory);
+  const showDocumentAttachmentsSection = showDraftCarForm;
+
+  /** Same collapse as Add Car to Purchase + Document Attachments. */
+  const showCurrentEntryDetailsSection = showDraftCarForm;
   const isCreateSubmitDisabled =
-    mode === "create" && (carEntries.length === 0 || showDraftCarForm);
+    mode === "create" &&
+    carEntries.length === 0 &&
+    !(
+      formData.car_id ??
+      (formData.car_ids && formData.car_ids.length > 0
+        ? formData.car_ids[0]
+        : null)
+    );
 
   const renderSections = () => (
     <>
@@ -1091,7 +1218,7 @@ const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
               <div className="p-5 sm:p-6 space-y-6">
 
             {/* Added cars — minimized rows + add another / remove */}
-            {mode === "create" && carEntries.length > 0 && (
+            {carEntries.length > 0 && (
               <div className="rounded-xl border border-emerald-200/80 dark:border-emerald-800/60 bg-gradient-to-br from-emerald-50/90 to-white dark:from-emerald-950/30 dark:to-gray-800/80 p-4 sm:p-5">
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                   <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
@@ -1244,16 +1371,23 @@ const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
               </div>
             )}
 
-            {/* Add Car to Purchase — create draft, or single-record update car change */}
+            {/* Add Car to Purchase — create draft, single-record update, or bulk entry edit */}
             {((mode === "create" && showDraftCarForm) ||
-              (mode === "update" && !Array.isArray(purchaseHistory))) && (
+              (mode === "update" && !Array.isArray(purchaseHistory)) ||
+              (mode === "update" &&
+                Array.isArray(purchaseHistory) &&
+                showDraftCarForm)) && (
               <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
                 <div className="flex items-start justify-between gap-3">
                   <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1 flex items-center gap-2">
                     <Plus className="w-5 h-5 text-blue-600 dark:text-blue-400" />{" "}
-                    {mode === "create" ? "Add Car to Purchase" : "Select Car"}
+                    {mode === "create" || Array.isArray(purchaseHistory)
+                      ? editingEntryIndex !== null
+                        ? "Edit Car in Purchase"
+                        : "Add Car to Purchase"
+                      : "Select Car"}
                   </h3>
-                  {mode === "create" &&
+                  {(mode === "create" || Array.isArray(purchaseHistory)) &&
                     editingEntryIndex === null &&
                     ((formData.car_id != null && formData.car_id !== 0) ||
                       (formData.car_ids && formData.car_ids.length > 0)) && (
@@ -1268,28 +1402,36 @@ const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
                     </button>
                   )}
                 </div>
-                {mode === "create" && (
+                {(mode === "create" || Array.isArray(purchaseHistory)) && (
                   <p className="text-xs text-gray-600 dark:text-gray-400 mb-5">
-                    Complete pricing and documents below, then click <span className="font-medium text-gray-800 dark:text-gray-200">Add Car to List</span> under Document Attachments.
+                    Complete pricing and documents below, then click{" "}
+                    <span className="font-medium text-gray-800 dark:text-gray-200">
+                      {editingEntryIndex !== null
+                        ? "Update Car in List"
+                        : "Add Car to List"}
+                    </span>
+                    .
                   </p>
                 )}
-                {mode === "update" && (
+                {mode === "update" && !Array.isArray(purchaseHistory) && (
                   <p className="text-xs text-gray-600 dark:text-gray-400 mb-5">
                     Search and select the vehicle linked to this purchase record.
                   </p>
                 )}
 
-                {/* Car selection + Purchase Date + H.S Code — one row on lg+ (create); update uses car only here */}
+                {/* Car selection + Purchase Date + H.S Code — one row on lg+ (create/bulk); single update uses car only here */}
                 <div
                   className={
-                    mode === "create"
+                    mode === "create" || Array.isArray(purchaseHistory)
                       ? "grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6"
                       : "grid grid-cols-1 gap-4"
                   }
                 >
                   <div className="relative min-w-0 z-30">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      {mode === "create" ? "Select Car to Add" : "Car"}
+                      {mode === "create" || Array.isArray(purchaseHistory)
+                        ? "Select Car to Add"
+                        : "Car"}
                     </label>
 
                     {/* Selected Car Display */}
@@ -1370,7 +1512,8 @@ const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
                                     })
                                     .map((car) => {
                                       const isAlreadyAdded =
-                                        mode === "create" &&
+                                        (mode === "create" ||
+                                          Array.isArray(purchaseHistory)) &&
                                         carEntries.some(
                                           (e, i) =>
                                             e.car_id === car.id &&
@@ -1409,7 +1552,7 @@ const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
                     )}
                   </div>
 
-                  {mode === "create" && (
+                  {(mode === "create" || Array.isArray(purchaseHistory)) && (
                     <>
                       <div className="min-w-0">
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -1454,8 +1597,8 @@ const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
                   {mode === 'create' ? "Current Entry Details" : "Car & Financial Details"}
                 </h3>
 
-                {/* Purchase Date and H.S Code — edit single record only (create flow uses Add Car section) */}
-                {mode === "update" && (
+                {/* Purchase Date and H.S Code — edit single record only (create/bulk use Add Car section) */}
+                {mode === "update" && !Array.isArray(purchaseHistory) && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -1848,7 +1991,8 @@ const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
               </div>
             )}
 
-            {mode === "create" && showDraftCarForm && (
+            {((mode === "create" || Array.isArray(purchaseHistory)) &&
+              showDraftCarForm) && (
               <div className="flex flex-wrap items-center justify-between gap-3 mt-2 pt-6 border-t border-gray-200 dark:border-gray-600">
                 <div className="flex flex-wrap items-center gap-2">
                   {carEntries.length > 0 && editingEntryIndex === null && (
@@ -1871,7 +2015,9 @@ const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
                     className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 text-white font-semibold rounded-xl transition-all shadow-md hover:shadow-lg transform active:scale-95"
                   >
                     <Plus className="w-5 h-5" />
-                    Add Car to List
+                    {editingEntryIndex !== null
+                      ? "Update Car in List"
+                      : "Add Car to List"}
                   </button>
                 </div>
               </div>
