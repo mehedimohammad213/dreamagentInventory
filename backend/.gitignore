@@ -1,0 +1,12 @@
+node_modules/
+.env
+public/car_image/*
+!public/car_image/.gitkeep
+public/categories/*
+!public/categories/.gitkeep
+public/attachments/*
+!public/attachments/.gitkeep
+public/purchase_history_pdfs/*
+!public/purchase_history_pdfs/.gitkeep
+*.log
+.DS_Store

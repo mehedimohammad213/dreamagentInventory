@@ -1,0 +1,42 @@
+{
+  "name": "car-management-express",
+  "version": "1.0.0",
+  "description": "Express + PostgreSQL backend for Car Management (Laravel API parity)",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "db:migrate": "node scripts/migrate.js",
+    "db:seed": "node scripts/seed.js",
+    "db:import-dump": "node scripts/import-mysql-dump.js --truncate",
+    "db:reset": "node scripts/migrate.js --fresh && node scripts/seed.js",
+    "db:reset-from-dump": "node scripts/migrate.js --fresh && node scripts/import-mysql-dump.js"
+  },
+  "keywords": [
+    "express",
+    "postgres",
+    "car-management"
+  ],
+  "license": "ISC",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.7.0",
+    "helmet": "^8.3.0",
+    "morgan": "^1.12.1",
+    "multer": "^2.4.0",
+    "nodemailer": "^10.0.10",
+    "pg": "^8.23.0",
+    "uuid": "^14.0.2",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
