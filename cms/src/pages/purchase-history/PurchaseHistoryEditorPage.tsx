@@ -113,6 +113,35 @@ const PurchaseHistoryEditorPage: React.FC = () => {
         let successCount = 0;
         let failCount = 0;
 
+        // When editing an LC group, delete purchase histories removed from the list
+        if (mode === "update" && Array.isArray(purchaseHistory)) {
+          const submittedIds = new Set(
+            data
+              .map((item) => (item as CreatePurchaseHistoryData & { id?: number }).id)
+              .filter((id): id is number => typeof id === "number")
+          );
+          const removed = purchaseHistory.filter((ph) => !submittedIds.has(ph.id));
+
+          for (const ph of removed) {
+            try {
+              const deleteResponse =
+                await purchaseHistoryApi.deletePurchaseHistory(ph.id);
+              if (deleteResponse.success) {
+                successCount++;
+              } else {
+                failCount++;
+                console.error(
+                  `Failed to delete purchase history #${ph.id}:`,
+                  deleteResponse.message
+                );
+              }
+            } catch (err) {
+              failCount++;
+              console.error(`Failed to delete purchase history #${ph.id}:`, err);
+            }
+          }
+        }
+
         for (const item of data) {
           const itemWithId = item as CreatePurchaseHistoryData & { id?: number };
           let response;

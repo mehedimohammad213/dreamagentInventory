@@ -52,7 +52,7 @@ interface PurchaseHistoryLCViewProps {
     isLoading: boolean;
     onView?: (purchaseHistory: PurchaseHistory) => void;
     onEdit?: (purchaseHistory: PurchaseHistory | PurchaseHistory[]) => void;
-    onDelete?: (purchaseHistory: PurchaseHistory) => void;
+    onDelete?: (purchaseHistory: PurchaseHistory | PurchaseHistory[]) => void;
     /** Navigate to create purchase history with LC fields copied from this group */
     onAddUnderLc?: (template: PurchaseHistory) => void;
 }
@@ -505,7 +505,9 @@ const PurchaseHistoryLCView: React.FC<PurchaseHistoryLCViewProps> = ({
                                                           icon: Trash2,
                                                           onClick: () =>
                                                               onDelete(
-                                                                  histories[0]
+                                                                  histories.length > 1
+                                                                      ? histories
+                                                                      : histories[0]
                                                               ),
                                                           variant: "danger" as const,
                                                       },

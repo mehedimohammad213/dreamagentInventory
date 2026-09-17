@@ -20,8 +20,9 @@ const PurchaseHistoryPage: React.FC = () => {
   const [lcHistoriesAll, setLcHistoriesAll] = useState<PurchaseHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [purchaseHistoryToDelete, setPurchaseHistoryToDelete] =
-    useState<PurchaseHistory | null>(null);
+  const [purchaseHistoriesToDelete, setPurchaseHistoriesToDelete] = useState<
+    PurchaseHistory[]
+  >([]);
   const [isDeleting, setIsDeleting] = useState(false);
   type PurchaseTab = "history" | "lc_wise";
   const allowedTabs: PurchaseTab[] = ["lc_wise", "history"];
@@ -216,30 +217,59 @@ const PurchaseHistoryPage: React.FC = () => {
     }
   };
 
-  const handleDelete = (purchaseHistory: PurchaseHistory) => {
-    setPurchaseHistoryToDelete(purchaseHistory);
+  const handleDelete = (
+    purchaseHistory: PurchaseHistory | PurchaseHistory[]
+  ) => {
+    const toDelete = Array.isArray(purchaseHistory)
+      ? purchaseHistory
+      : [purchaseHistory];
+    setPurchaseHistoriesToDelete(toDelete);
     setShowDeleteModal(true);
   };
 
   const confirmDelete = async () => {
-    if (!purchaseHistoryToDelete) return;
+    if (purchaseHistoriesToDelete.length === 0) return;
 
     setIsDeleting(true);
     try {
-      const response = await purchaseHistoryApi.deletePurchaseHistory(
-        purchaseHistoryToDelete.id
-      );
-      if (response.success) {
-        toast.success("Purchase history deleted successfully");
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const ph of purchaseHistoriesToDelete) {
+        try {
+          const response = await purchaseHistoryApi.deletePurchaseHistory(
+            ph.id
+          );
+          if (response.success) {
+            successCount++;
+          } else {
+            failCount++;
+          }
+        } catch {
+          failCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(
+          successCount === 1
+            ? "Purchase history deleted successfully"
+            : `${successCount} purchase histories deleted successfully`
+        );
         if (activeTab === "history") {
           fetchHistoryPurchaseHistories();
         } else {
           fetchLcHistoriesAll();
         }
         setShowDeleteModal(false);
-        setPurchaseHistoryToDelete(null);
-      } else {
-        toast.error(response.message || "Failed to delete purchase history");
+        setPurchaseHistoriesToDelete([]);
+      }
+      if (failCount > 0) {
+        toast.error(
+          failCount === 1
+            ? "Failed to delete purchase history"
+            : `Failed to delete ${failCount} purchase histories`
+        );
       }
     } catch (error) {
       console.error("Error deleting purchase history:", error);
@@ -546,11 +576,19 @@ const PurchaseHistoryPage: React.FC = () => {
         {/* Delete Confirmation Modal */}
         <DeleteConfirmationModal
           isOpen={showDeleteModal}
-          title="Delete Purchase History"
-          message={`Are you sure you want to delete purchase history #${purchaseHistoryToDelete?.id}? This action cannot be undone.`}
+          title={
+            purchaseHistoriesToDelete.length > 1
+              ? "Delete LC"
+              : "Delete Purchase History"
+          }
+          message={
+            purchaseHistoriesToDelete.length > 1
+              ? `Are you sure you want to delete this LC and all ${purchaseHistoriesToDelete.length} purchase histories under it? This action cannot be undone.`
+              : `Are you sure you want to delete purchase history #${purchaseHistoriesToDelete[0]?.id}? This action cannot be undone.`
+          }
           onClose={() => {
             setShowDeleteModal(false);
-            setPurchaseHistoryToDelete(null);
+            setPurchaseHistoriesToDelete([]);
           }}
           onConfirm={confirmDelete}
           isLoading={isDeleting}
