@@ -1,0 +1,728 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom styles */
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Mobile optimizations */
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Mobile-first responsive design */
+@media (max-width: 768px) {
+  body {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* Prevent horizontal scroll on mobile */
+  html,
+  body {
+    overflow-x: hidden;
+    width: 100%;
+  }
+
+  /* Improve touch targets */
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Better form inputs on mobile */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+    /* Prevents zoom on iOS */
+    border-radius: 8px;
+  }
+
+  /* Improve table responsiveness */
+  table {
+    font-size: 12px;
+  }
+
+  /* Better modal spacing on mobile */
+  .modal-content {
+    margin: 1rem;
+    max-height: calc(100vh - 2rem);
+  }
+}
+
+/* iOS Safari specific fixes */
+@supports (-webkit-touch-callout: none) {
+  .ios-fix {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Fix for iOS viewport units */
+  .vh-ios {
+    height: 100vh;
+    height: -webkit-fill-available;
+  }
+}
+
+/* Android Chrome specific fixes */
+@media screen and (-webkit-min-device-pixel-ratio: 0) {
+  .android-fix {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+  }
+}
+
+/* Mobile gesture improvements */
+@media (max-width: 768px) {
+
+  /* Swipe gestures for carousel-like components */
+  .swipe-container {
+    touch-action: pan-x;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .swipe-item {
+    scroll-snap-align: start;
+    flex-shrink: 0;
+  }
+
+  /* Pull-to-refresh indicator */
+  .pull-to-refresh {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .pull-to-refresh::before {
+    content: "";
+    position: absolute;
+    top: -50px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 20px;
+    height: 20px;
+    border: 2px solid #db2d2e;
+    border-top: 2px solid transparent;
+    border-radius: 50%;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .pull-to-refresh.pulling::before {
+    opacity: 1;
+    animation: spin 1s linear infinite;
+  }
+
+  /* Mobile-specific button styles */
+  .mobile-button {
+    min-height: 48px;
+    min-width: 48px;
+    padding: 12px 16px;
+    font-size: 16px;
+    border-radius: 8px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Mobile-friendly modals */
+  .mobile-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 50;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+  }
+
+  .mobile-modal-content {
+    background: white;
+    border-radius: 16px 16px 0 0;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    transform: translateY(100%);
+    transition: transform 0.3s ease-out;
+  }
+
+  .mobile-modal.open .mobile-modal-content {
+    transform: translateY(0);
+  }
+
+  /* Mobile navigation improvements */
+  .mobile-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    border-top: 1px solid #e5e7eb;
+    padding: 8px 0;
+    z-index: 40;
+  }
+
+  .mobile-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 12px;
+    text-decoration: none;
+    color: #6b7280;
+    font-size: 12px;
+    transition: color 0.2s ease;
+  }
+
+  .mobile-nav-item.active {
+    color: #db2d2e;
+  }
+
+  .mobile-nav-item svg {
+    width: 24px;
+    height: 24px;
+    margin-bottom: 4px;
+  }
+
+  /* Mobile table improvements */
+  .mobile-table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .mobile-table table {
+    min-width: 600px;
+  }
+
+  /* Mobile card improvements */
+  .mobile-card {
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+
+  /* Mobile form improvements */
+  .mobile-form-group {
+    margin-bottom: 20px;
+  }
+
+  .mobile-form-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #374151;
+  }
+
+  .mobile-form-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 16px;
+    background: white;
+    transition: border-color 0.2s ease;
+  }
+
+  .mobile-form-input:focus {
+    outline: none;
+    border-color: #db2d2e;
+    box-shadow: 0 0 0 3px rgba(219, 45, 46, 0.1);
+  }
+
+  /* Mobile loading states */
+  .mobile-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+
+  .mobile-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #f3f4f6;
+    border-top: 3px solid #db2d2e;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+}
+
+/* Mobile-specific animations */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+  }
+
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Mobile-specific utility classes */
+.mobile-only {
+  display: block;
+}
+
+.desktop-only {
+  display: none;
+}
+
+@media (min-width: 769px) {
+  .mobile-only {
+    display: none;
+  }
+
+  .desktop-only {
+    display: block;
+  }
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
+    monospace;
+}
+
+/* React Toastify Custom Styles */
+.toast-container {
+  z-index: 9999;
+}
+
+.custom-toast {
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", sans-serif;
+  min-height: 60px;
+}
+
+.custom-toast-body {
+  font-size: 14px;
+  font-weight: 500;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+}
+
+.custom-toast-progress {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.Toastify__toast {
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", sans-serif;
+}
+
+.Toastify__toast--success {
+  background: linear-gradient(135deg, #4cd4a1, #259a6e);
+  color: white;
+}
+
+.Toastify__toast--error {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+}
+
+.Toastify__toast--info {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+}
+
+.Toastify__toast--warning {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+}
+
+.Toastify__toast-body {
+  font-size: 14px;
+  font-weight: 500;
+  padding: 12px 16px;
+}
+
+.Toastify__progress-bar {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.Toastify__close-button {
+  color: white;
+  opacity: 0.8;
+}
+
+.Toastify__close-button:hover {
+  opacity: 1;
+}
+
+/* Dark mode toast styles */
+.dark .Toastify__toast--success {
+  background: linear-gradient(135deg, #33ce94, #1c7352);
+}
+
+.dark .Toastify__toast--error {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+}
+
+.dark .Toastify__toast--info {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+}
+
+.dark .Toastify__toast--warning {
+  background: linear-gradient(135deg, #d97706, #b45309);
+}
+
+/* Light theme scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f8fafc;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Dark mode scrollbar */
+.dark ::-webkit-scrollbar-track {
+  background: #374151;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #6b7280;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* Hide scrollbar track (keep scrolling) for table containers */
+.no-horizontal-scrollbar {
+  -ms-overflow-style: none; /* IE/Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.no-horizontal-scrollbar::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+/* Hide vertical scrollbar (keep scrolling) */
+.no-vertical-scrollbar {
+  -ms-overflow-style: none; /* IE/Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.no-vertical-scrollbar::-webkit-scrollbar {
+  width: 0;
+}
+
+/* Professional Color System - CSS Custom Properties */
+:root {
+  /* Primary Colors - Brand Red (base rgb(219 45 46) => #db2d2e) */
+  --color-primary-50: #fdf3f3;
+  --color-primary-100: #fbe0e0;
+  --color-primary-200: #f6c4c4;
+  --color-primary-300: #ef9c9d;
+  --color-primary-400: #e66565;
+  --color-primary-500: #db2d2e;
+  --color-primary-600: #c72122;
+  --color-primary-700: #a81c1d;
+  --color-primary-800: #8a1a1b;
+  --color-primary-900: #731818;
+  --color-primary-950: #3f0a0a;
+
+  /* Secondary Colors - Sophisticated Teal */
+  --color-secondary-50: #f0fdfa;
+  --color-secondary-100: #ccfbf1;
+  --color-secondary-200: #99f6e4;
+  --color-secondary-300: #5eead4;
+  --color-secondary-400: #2dd4bf;
+  --color-secondary-500: #14b8a6;
+  --color-secondary-600: #0d9488;
+  --color-secondary-700: #0f766e;
+  --color-secondary-800: #115e59;
+  --color-secondary-900: #134e4a;
+  --color-secondary-950: #042f2e;
+
+  /* Status Colors */
+  --color-success-500: #4cd4a1;
+  --color-success-600: #33ce94;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #d97706;
+  --color-error-500: #ef4444;
+  --color-error-600: #dc2626;
+  --color-info-500: #3b82f6;
+  --color-info-600: #2563eb;
+
+  /* Neutral Colors */
+  --color-neutral-50: #fafafa;
+  --color-neutral-100: #f5f5f5;
+  --color-neutral-200: #e5e5e5;
+  --color-neutral-300: #d4d4d4;
+  --color-neutral-400: #a3a3a3;
+  --color-neutral-500: #737373;
+  --color-neutral-600: #525252;
+  --color-neutral-700: #404040;
+  --color-neutral-800: #262626;
+  --color-neutral-900: #171717;
+  --color-neutral-950: #0a0a0a;
+
+  /* Light Theme Variables */
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f8fafc;
+  --color-bg-tertiary: #f1f5f9;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #64748b;
+  --color-text-tertiary: #94a3b8;
+  --color-border-primary: #e2e8f0;
+  --color-border-secondary: #cbd5e1;
+  --color-shadow: rgba(0, 0, 0, 0.1);
+  --color-overlay: rgba(0, 0, 0, 0.5);
+
+  /* Dark Theme Variables */
+  --color-bg-primary-dark: #0f172a;
+  --color-bg-secondary-dark: #1e293b;
+  --color-bg-tertiary-dark: #334155;
+  --color-text-primary-dark: #f8fafc;
+  --color-text-secondary-dark: #cbd5e1;
+  --color-text-tertiary-dark: #94a3b8;
+  --color-border-primary-dark: #334155;
+  --color-border-secondary-dark: #475569;
+  --color-shadow-dark: rgba(0, 0, 0, 0.3);
+  --color-overlay-dark: rgba(0, 0, 0, 0.7);
+
+  /* Semantic Color Variables */
+  --color-brand-primary: var(--color-primary-600);
+  --color-brand-secondary: var(--color-secondary-600);
+  --color-accent: var(--color-primary-500);
+  --color-success: var(--color-success-500);
+  --color-warning: var(--color-warning-500);
+  --color-error: var(--color-error-500);
+  --color-info: var(--color-info-500);
+
+  /* Component-specific variables */
+  --color-button-primary: var(--color-primary-600);
+  --color-button-primary-hover: var(--color-primary-700);
+  --color-button-secondary: var(--color-secondary-600);
+  --color-button-secondary-hover: var(--color-secondary-700);
+  --color-button-danger: var(--color-error-500);
+  --color-button-danger-hover: var(--color-error-600);
+
+  /* Surface and elevation */
+  --color-surface-elevated: var(--color-bg-primary);
+  --color-surface-overlay: var(--color-overlay);
+  --shadow-sm: 0 1px 2px 0 var(--color-shadow);
+  --shadow-md: 0 4px 6px -1px var(--color-shadow);
+  --shadow-lg: 0 10px 15px -3px var(--color-shadow);
+  --shadow-xl: 0 20px 25px -5px var(--color-shadow);
+
+  color-scheme: light;
+}
+
+/* Dark theme overrides */
+.dark {
+  --color-bg-primary: var(--color-bg-primary-dark);
+  --color-bg-secondary: var(--color-bg-secondary-dark);
+  --color-bg-tertiary: var(--color-bg-tertiary-dark);
+  --color-text-primary: var(--color-text-primary-dark);
+  --color-text-secondary: var(--color-text-secondary-dark);
+  --color-text-tertiary: var(--color-text-tertiary-dark);
+  --color-border-primary: var(--color-border-primary-dark);
+  --color-border-secondary: var(--color-border-secondary-dark);
+  --color-shadow: var(--color-shadow-dark);
+  --color-overlay: var(--color-overlay-dark);
+  --color-surface-elevated: var(--color-bg-secondary-dark);
+  --color-surface-overlay: var(--color-overlay-dark);
+
+  color-scheme: dark;
+}
+
+/* Light theme base styles */
+body {
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Professional gradient backgrounds */
+.bg-gradient-primary {
+  background: linear-gradient(135deg,
+      var(--color-primary-600),
+      var(--color-primary-700));
+}
+
+.bg-gradient-secondary {
+  background: linear-gradient(135deg,
+      var(--color-secondary-600),
+      var(--color-secondary-700));
+}
+
+.bg-gradient-brand {
+  background: linear-gradient(135deg,
+      var(--color-primary-600),
+      var(--color-secondary-600));
+}
+
+/* Professional button styles */
+.btn-primary {
+  background-color: var(--color-button-primary);
+  color: white;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.btn-primary:hover {
+  background-color: var(--color-button-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-secondary {
+  background-color: var(--color-button-secondary);
+  color: white;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+  background-color: var(--color-button-secondary-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-danger {
+  background-color: var(--color-button-danger);
+  color: white;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.btn-danger:hover {
+  background-color: var(--color-button-danger-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Professional card styles */
+.card {
+  background-color: var(--color-surface-elevated);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease;
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+/* Professional form styles */
+.form-input {
+  background-color: var(--color-bg-primary);
+  border: 1px solid var(--color-border-primary);
+  color: var(--color-text-primary);
+  transition: all 0.2s ease;
+}
+
+.form-input:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(219, 45, 46, 0.1);
+  outline: none;
+}
+
+/* Professional status indicators */
+.status-success {
+  background-color: var(--color-success);
+  color: white;
+}
+
+.status-warning {
+  background-color: var(--color-warning);
+  color: white;
+}
+
+.status-error {
+  background-color: var(--color-error);
+  color: white;
+}
+
+.status-info {
+  background-color: var(--color-info);
+  color: white;
+}
+
+/* Hide Number Input Spinners */
+.no-spinner::-webkit-inner-spin-button,
+.no-spinner::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+}
+
+.no-spinner {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* Global Number Input Spinner Hide */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
