@@ -1,6 +1,7 @@
 import type { PoolClient } from 'pg';
 import Model from '../lib/Model.js';
 import { query } from '../db/pool.js';
+import config from '../config/index.js';
 
 export class CarPhoto extends Model {
   static table = 'car_photos';
@@ -19,6 +20,19 @@ export class CarPhoto extends Model {
   declare is_primary?: boolean;
   declare sort_order?: number;
   declare is_hidden?: boolean;
+
+  /** Resolve folder path (e.g. car_image/foo.jpg) to a public URL. */
+  get public_url(): string | null {
+    if (!this.url) return null;
+    if (/^https?:\/\//i.test(String(this.url))) return String(this.url);
+    const clean = String(this.url).replace(/^\/+/, '').replace(/^storage\//, '');
+    return `${config.app.url}/${clean}`;
+  }
+
+  toJSON(): Record<string, unknown> {
+    const base = super.toJSON();
+    return { ...base, url: this.public_url };
+  }
 
   static async create(data: Record<string, unknown>, client: PoolClient | null = null): Promise<CarPhoto> {
     const photo = await super.create(data, client) as CarPhoto;
