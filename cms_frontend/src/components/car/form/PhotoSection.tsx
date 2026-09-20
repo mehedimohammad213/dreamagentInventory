@@ -3,7 +3,7 @@
 import React, { useState, useRef } from "react";
 import { Image, Plus, X, Loader2, AlertCircle } from "lucide-react";
 import { CreateCarData } from "../../../services/carApi";
-import { imgbbApi } from "../../../services/imgbbApi";
+import { carImageApi, resolvePublicAssetUrl } from "../../../services/carImageApi";
 
 interface PhotoSectionProps {
   formData: CreateCarData;
@@ -30,7 +30,7 @@ const PhotoSection: React.FC<PhotoSectionProps> = ({
 
   const handleFileUpload = async (file: File, index: number) => {
     // Validate file
-    const validation = imgbbApi.validateImageFile(file);
+    const validation = carImageApi.validateImageFile(file);
     if (!validation.isValid) {
       setUploadError(validation.error || 'Invalid file');
       return;
@@ -40,14 +40,14 @@ const PhotoSection: React.FC<PhotoSectionProps> = ({
     setUploadError(null);
 
     try {
-      const response = await imgbbApi.uploadImage(file, {
+      const response = await carImageApi.uploadImage(file, {
         name: `car-photo-${Date.now()}`,
       });
 
-      // Update the photo with the uploaded URL
+      // Store folder path in DB; public URL is used for preview
       onUpdatePhoto(index, {
         ...formData.photos![index],
-        url: response.data.url,
+        url: response.data.path || response.data.url,
       });
     } catch (error) {
       console.error('Upload error:', error);
@@ -74,17 +74,17 @@ const PhotoSection: React.FC<PhotoSectionProps> = ({
     setUploadError(null);
 
     const uploadPromises = files.map(async (file, i) => {
-      const validation = imgbbApi.validateImageFile(file);
+      const validation = carImageApi.validateImageFile(file);
       if (!validation.isValid) {
         throw new Error(`${file.name}: ${validation.error}`);
       }
 
-      const response = await imgbbApi.uploadImage(file, {
+      const response = await carImageApi.uploadImage(file, {
         name: `car-photo-${Date.now()}-${i}`,
       });
 
       return {
-        url: response.data.url,
+        url: response.data.path || response.data.url,
         is_primary: formData.photos?.length === 0 && i === 0,
         sort_order: (formData.photos?.length || 0) + i,
         is_hidden: false,
@@ -127,14 +127,15 @@ const PhotoSection: React.FC<PhotoSectionProps> = ({
           {formData.photos?.map((photo, index) => (
             <div key={index} className="relative group">
               <img
-                src={photo.url}
+                src={resolvePublicAssetUrl(photo.url)}
                 alt={`Car photo ${index + 1}`}
                 className="w-full h-32 object-cover rounded-lg border border-gray-200"
                 onError={(e) => {
                   // Fallback to original URL if image fails to load
                   const target = e.target as HTMLImageElement;
-                  if (photo.url && target.src !== photo.url) {
-                    target.src = photo.url;
+                  const resolved = resolvePublicAssetUrl(photo.url);
+                  if (photo.url && target.src !== resolved) {
+                    target.src = resolved;
                   }
                 }}
               />
@@ -179,13 +180,14 @@ const PhotoSection: React.FC<PhotoSectionProps> = ({
             <div className="w-20 h-20 flex-shrink-0">
               {photo.url ? (
                 <img
-                  src={photo.url}
+                  src={resolvePublicAssetUrl(photo.url)}
                   alt={`Preview ${index + 1}`}
                   className="w-full h-full object-cover rounded-lg border border-gray-200"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
-                    if (photo.url && target.src !== photo.url) {
-                      target.src = photo.url;
+                    const resolved = resolvePublicAssetUrl(photo.url);
+                    if (photo.url && target.src !== resolved) {
+                      target.src = resolved;
                     }
                   }}
                 />

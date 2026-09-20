@@ -161,6 +161,25 @@ export async function downloadAttachedFile(req: Request, res: Response): Promise
   }
 }
 
+/** Upload a car gallery image into public/car_image */
+export async function uploadImage(req: Request, res: Response): Promise<void | Response> {
+  try {
+    const file = req.file;
+    if (!file) {
+      return res.status(422).json({
+        success: false,
+        message: 'Image file is required',
+      });
+    }
+
+    const result: any = await CarService.uploadCarImage(file);
+    if (result.rawResponse) return res.status(result.status || 200).json(result.rawResponse);
+    return success(res, result.data, result.message, result.status || 201);
+  } catch (err) {
+    return handleControllerError(res, err, 'Failed to upload car image');
+  }
+}
+
 export default {
   index,
   show,
@@ -175,4 +194,5 @@ export default {
   getFilterOptions,
   getAttachedFile,
   downloadAttachedFile,
+  uploadImage,
 };

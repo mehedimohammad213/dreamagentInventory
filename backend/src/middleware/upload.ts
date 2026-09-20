@@ -48,6 +48,19 @@ export const uploadCarAttachment = multer({
   },
 }).single('attached_file');
 
+/** Car gallery photos → public/car_image */
+export const uploadCarImage = multer({
+  storage: diskStorage(config.paths.carImages),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const ok =
+      /jpeg|jpg|png|gif|webp/i.test(path.extname(file.originalname)) ||
+      /image\/(jpeg|jpg|png|gif|webp)/i.test(file.mimetype);
+    if (ok) cb(null, true);
+    else cb(new Error('Invalid image type'));
+  },
+}).single('image');
+
 export const uploadExcel = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 20 * 1024 * 1024 },
@@ -99,6 +112,7 @@ export type MulterRequest = Request & {
 export default {
   uploadCategoryImage,
   uploadCarAttachment,
+  uploadCarImage,
   uploadExcel,
   uploadPurchasePdfs,
   uploadCarForm,

@@ -6,6 +6,7 @@ import {
   uploadExcel,
   uploadPurchasePdfs,
   uploadCarForm,
+  uploadCarImage,
 } from '../middleware/upload.js';
 
 import * as AuthController from '../controllers/AuthController.js';
@@ -75,6 +76,7 @@ router.delete('/categories/:id', auth, CategoryController.destroy);
 
 // Cars writes — static paths before :car
 router.post('/cars/import/excel', auth, wrapUpload(uploadExcel), CarController.importFromExcel);
+router.post('/cars/upload-image', auth, wrapUpload(uploadCarImage), CarController.uploadImage);
 router.get('/cars/export/excel', auth, CarController.exportToExcel);
 router.put('/cars/bulk/status', auth, CarController.bulkUpdateStatus);
 router.post('/cars', auth, wrapUpload(uploadCarForm), CarController.store);

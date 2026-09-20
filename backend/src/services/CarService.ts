@@ -10,7 +10,7 @@ import { query, withTransaction } from '../db/pool.js';
 import { validate, parseMaybeJson, toInt, toFloat } from '../utils/validate.js';
 import localFileService from './LocalFileService.js';
 import { importCarsFromExcel } from './ExcelImportService.js';
-import { ValidationError, NotFoundError } from '../lib/errors.js';
+import { ValidationError, NotFoundError, AppError } from '../lib/errors.js';
 
 const CAR_SCALAR_FIELDS = [
   'category_id', 'subcategory_id', 'ref_no', 'code', 'make', 'model', 'model_code',
@@ -637,6 +637,45 @@ export async function downloadAttachedFile(id) {
   throw new NotFoundError('Attached file not found on disk');
 }
 
+/**
+ * Save gallery image into public/car_image and return path + public URL.
+ * Stores relative path in DB (e.g. car_image/xxx.jpg).
+ */
+export async function uploadCarImage(file) {
+  if (!file) {
+    throw new ValidationError({ image: ['The image field is required.'] });
+  }
+
+  // Multer already wrote into car_image/; keep that file and return folder path
+  if (file.path && file.filename) {
+    const relativePath = `car_image/${file.filename}`;
+    return {
+      data: {
+        path: relativePath,
+        url: localFileService.publicUrl(relativePath),
+        filename: file.filename,
+      },
+      message: 'Image uploaded successfully',
+      status: 201,
+    };
+  }
+
+  const saved = localFileService.saveUpload(file, 'car_image');
+  if (!saved) {
+    throw new AppError('Failed to save image', 500);
+  }
+
+  return {
+    data: {
+      path: saved.path,
+      url: saved.url,
+      filename: saved.filename,
+    },
+    message: 'Image uploaded successfully',
+    status: 201,
+  };
+}
+
 export default {
   listCars,
   getCar,
@@ -651,4 +690,5 @@ export default {
   getFilterOptions,
   getAttachedFile,
   downloadAttachedFile,
+  uploadCarImage,
 };
