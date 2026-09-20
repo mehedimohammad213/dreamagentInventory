@@ -51,8 +51,8 @@ export const config: AppConfig = {
     name: process.env.APP_NAME || 'Dream Agent Car Vision',
     env: process.env.APP_ENV || 'local',
     debug: process.env.APP_DEBUG === 'true',
-    url: process.env.APP_URL || 'http://localhost:4000',
-    port: Number(process.env.PORT || 4000),
+    url: process.env.APP_URL || 'http://localhost:4004',
+    port: Number(process.env.PORT || 4004),
   },
   db: {
     host: process.env.DB_HOST || '127.0.0.1',

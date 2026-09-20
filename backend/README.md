@@ -29,7 +29,7 @@ npm run db:seed
 npm run dev
 ```
 
-API base: `http://localhost:4000/api`  
+API base: `http://localhost:4004/api`  
 Health: `GET /up`
 
 ### Demo users
