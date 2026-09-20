@@ -1,7 +1,8 @@
 "use client";
 
+import { useNavigate } from "@/hooks/useNavigate";
+
 import React, { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
 import {
     ShoppingCartIcon,
     CarIcon,

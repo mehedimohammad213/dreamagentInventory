@@ -1,7 +1,8 @@
 "use client";
 
+import { useNavigate } from "@/hooks/useNavigate";
+
 import React from "react";
-import { useNavigate } from "react-router-dom";
 import { Car, ArrowLeft } from "lucide-react";
 import { Car as CarType } from "../../services/carApi";
 import { getStatusColor } from "../../utils/carUtils";

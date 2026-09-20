@@ -1,12 +1,12 @@
 "use client";
 
-import ProtectedRoute from "@/components/ProtectedRoute";
-import PurchaseHistoryEditorPage from "@/views/purchase-history/PurchaseHistoryEditorPage";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import PurchaseHistoryEditor from "@/components/purchase-history/PurchaseHistoryEditor";
 
 export default function PurchaseHistoryCreatePage() {
   return (
     <ProtectedRoute role="admin">
-      <PurchaseHistoryEditorPage />
+      <PurchaseHistoryEditor />
     </ProtectedRoute>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import StockGallery from "@/views/stock/StockGallery";
+import StockGallery from "@/components/stock/StockGallery";
 
 export default function StockGalleryPage() {
   return <StockGallery />;

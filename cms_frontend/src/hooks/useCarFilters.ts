@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useUrlSearchParams as useSearchParams } from "@/hooks/useUrlSearchParams";
 
+import { useState, useEffect } from "react";
 export const useCarFilters = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 

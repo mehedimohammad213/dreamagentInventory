@@ -1,7 +1,7 @@
 "use client";
 
-import ProtectedRoute from "@/components/ProtectedRoute";
-import AdminOrders from "@/views/order/AdminOrders";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import AdminOrders from "@/components/order/AdminOrders";
 
 export default function AdminOrdersPage() {
   return (

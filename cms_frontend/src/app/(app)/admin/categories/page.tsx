@@ -1,7 +1,7 @@
 "use client";
 
-import ProtectedRoute from "@/components/ProtectedRoute";
-import CategoryManagement from "@/views/category/CategoryManagement";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import CategoryManagement from "@/components/category/CategoryManagement";
 
 export default function AdminCategoriesPage() {
   return (

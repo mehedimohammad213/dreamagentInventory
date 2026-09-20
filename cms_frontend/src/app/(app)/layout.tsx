@@ -1,4 +1,4 @@
-import AppLayout from "@/components/AppLayout";
+import AppLayout from "@/components/layout/AppLayout";
 
 export const dynamic = "force-dynamic";
 

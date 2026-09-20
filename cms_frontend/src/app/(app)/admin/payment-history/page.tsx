@@ -1,7 +1,7 @@
 "use client";
 
-import ProtectedRoute from "@/components/ProtectedRoute";
-import PaymentHistory from "@/views/payment-history/PaymentHistory";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import PaymentHistory from "@/components/payment-history/PaymentHistory";
 
 export default function PaymentHistoryPage() {
   return (

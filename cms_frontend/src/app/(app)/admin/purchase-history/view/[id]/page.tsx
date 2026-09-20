@@ -1,7 +1,7 @@
 "use client";
 
-import ProtectedRoute from "@/components/ProtectedRoute";
-import PurchaseHistoryDetails from "@/views/purchase-history/PurchaseHistoryDetails";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import PurchaseHistoryDetails from "@/components/purchase-history/PurchaseHistoryDetails";
 
 export default function PurchaseHistoryViewPage() {
   return (

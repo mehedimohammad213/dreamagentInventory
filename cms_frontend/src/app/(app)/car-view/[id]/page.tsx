@@ -1,6 +1,6 @@
 "use client";
 
-import ViewCar from "@/views/car/ViewCar";
+import ViewCar from "@/components/car/ViewCar";
 
 export default function CarViewPage() {
   return <ViewCar />;

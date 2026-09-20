@@ -1,7 +1,7 @@
 "use client";
 
-import ProtectedRoute from "@/components/ProtectedRoute";
-import CreateCar from "@/views/car/CreateCar";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import CreateCar from "@/components/car/CreateCar";
 
 export default function CreateCarPage() {
   return (

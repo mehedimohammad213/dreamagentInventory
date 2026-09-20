@@ -1,12 +1,12 @@
 "use client";
 
-import ProtectedRoute from "@/components/ProtectedRoute";
-import Car from "@/views/car/Car";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import CarCatalog from "@/components/car/CarCatalog";
 
 export default function AdminCarsPage() {
   return (
     <ProtectedRoute role="admin">
-      <Car />
+      <CarCatalog />
     </ProtectedRoute>
   );
 }
