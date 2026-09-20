@@ -2,16 +2,18 @@
   "name": "car-management-express",
   "version": "1.0.0",
   "description": "Express + PostgreSQL backend for Car Management (Laravel API parity)",
-  "main": "src/server.js",
+  "main": "dist/src/server.js",
   "type": "module",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "nodemon src/server.js",
-    "db:migrate": "node scripts/migrate.js",
-    "db:seed": "node scripts/seed.js",
-    "db:import-dump": "node scripts/import-mysql-dump.js --truncate",
-    "db:reset": "node scripts/migrate.js --fresh && node scripts/seed.js",
-    "db:reset-from-dump": "node scripts/migrate.js --fresh && node scripts/import-mysql-dump.js"
+    "start": "node dist/src/server.js",
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "db:seed": "tsx scripts/seed.ts",
+    "db:import-dump": "tsx scripts/import-mysql-dump.ts --truncate",
+    "db:reset": "tsx scripts/migrate.ts --fresh && tsx scripts/seed.ts",
+    "db:reset-from-dump": "tsx scripts/migrate.ts --fresh && tsx scripts/import-mysql-dump.ts"
   },
   "keywords": [
     "express",
@@ -37,6 +39,16 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14"
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/morgan": "^1.9.10",
+    "@types/multer": "^2.0.0",
+    "@types/node": "^24.5.2",
+    "@types/nodemailer": "^7.0.1",
+    "@types/pg": "^8.15.5",
+    "nodemon": "^3.1.14",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
   }
 }

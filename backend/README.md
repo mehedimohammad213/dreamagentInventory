@@ -1,12 +1,13 @@
 # Car Management — Express API
 
-Express + PostgreSQL rewrite of the Laravel `Backend` API, using `pg` (node-postgres) and a custom Model / QueryBuilder layer (no ORM).
+Express + PostgreSQL rewrite of the Laravel `Backend` API, using `pg` (node-postgres) and a custom Model / QueryBuilder layer (no ORM). Written in **TypeScript**; run with **`tsx`** in development (`npm run dev`) and compile with `tsc` for production (`npm run build` / `npm start`).
 
 ## Stack
 
+- **TypeScript** + **tsx** — typed source; scripts and `dev` use `tsx`
 - **Express 5** — REST API under `/api`
 - **PostgreSQL** via **`pg`**
-- **Custom query layer** — `src/lib/QueryBuilder.js` + `src/lib/Model.js`
+- **Custom query layer** — `src/lib/QueryBuilder.ts` + `src/lib/Model.ts`
 - **Auth** — Laravel Sanctum–compatible bearer tokens (`id|plainToken`, SHA-256 hashed in DB)
 - **Uploads** — multer; all images/files stored under `public/` (car_image, categories, attachments)
 - **Excel** — `xlsx` import
@@ -70,7 +71,7 @@ Same paths and auth rules as `Backend/routes/api.php`:
 
 ## Custom model layer (quick use)
 
-```js
+```ts
 import Car from './models/Car.js';
 
 const cars = await Car.query()
@@ -84,7 +85,7 @@ const car = await Car.create({ make: 'Toyota', model: 'Aqua', year: 2018 });
 
 Transactions:
 
-```js
+```ts
 import { withTransaction } from './db/pool.js';
 
 await withTransaction(async (client) => {
