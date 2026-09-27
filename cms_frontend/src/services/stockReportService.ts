@@ -6,6 +6,49 @@ import {
     STATUS_SECTION_LABELS,
 } from "../utils/stockStatus";
 
+const LOGO_VIEWBOX_WIDTH = 2500;
+const LOGO_VIEWBOX_HEIGHT = 540;
+
+async function loadLogoPngDataUrl(): Promise<string | null> {
+    try {
+        const response = await fetch("/logo.svg");
+        if (!response.ok) return null;
+
+        let svgText = await response.text();
+        if (!/\swidth=/i.test(svgText)) {
+            svgText = svgText.replace(
+                /<svg\b/i,
+                `<svg width="${LOGO_VIEWBOX_WIDTH}" height="${LOGO_VIEWBOX_HEIGHT}"`
+            );
+        }
+
+        const encoded = encodeURIComponent(svgText)
+            .replace(/'/g, "%27")
+            .replace(/"/g, "%22");
+
+        return await new Promise<string>((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement("canvas");
+                canvas.width = LOGO_VIEWBOX_WIDTH;
+                canvas.height = LOGO_VIEWBOX_HEIGHT;
+                const ctx = canvas.getContext("2d");
+                if (!ctx) {
+                    reject(new Error("Canvas context unavailable"));
+                    return;
+                }
+                ctx.drawImage(img, 0, 0, LOGO_VIEWBOX_WIDTH, LOGO_VIEWBOX_HEIGHT);
+                resolve(canvas.toDataURL("image/png"));
+            };
+            img.onerror = () => reject(new Error("Failed to load logo SVG"));
+            img.src = `data:image/svg+xml;charset=utf-8,${encoded}`;
+        });
+    } catch (error) {
+        console.warn("Could not load PDF logo:", error);
+        return null;
+    }
+}
+
 export const StockReportService = {
     generatePDF: async (stocks: Stock[], searchTerm?: string) => {
         if (stocks.length === 0) {
@@ -30,21 +73,47 @@ export const StockReportService = {
         const month = months[now.getMonth()];
         const year = now.getFullYear();
         const dateStr = `STOCK LIST DATE: ${day} ${month} ${year}`;
+        const logoDataUrl = await loadLogoPngDataUrl();
+        const logoWidth = 80;
+        const logoHeight = logoWidth * (LOGO_VIEWBOX_HEIGHT / LOGO_VIEWBOX_WIDTH);
+        const logoTop = 6;
+        const titleY = logoDataUrl ? logoTop + logoHeight + 8 : 20;
+        // Title is hidden for now — address sits under the logo.
+        // Restore title spacing with: const addressY = titleY + 6;
+        const addressY = logoDataUrl ? logoTop + logoHeight + 6 : 26;
+        const stockListY = addressY + 12;
+        const headerBottom = stockListY + 6;
 
         const drawHeader = () => {
-            doc.setFontSize(18);
-            doc.setFont("helvetica", "bold");
-            doc.setTextColor(0, 0, 0);
-            doc.text("DREAM AGENT CAR VISION", pageWidth / 2, 20, {
-                align: "center",
-            });
+            if (logoDataUrl) {
+                try {
+                    doc.addImage(
+                        logoDataUrl,
+                        "PNG",
+                        (pageWidth - logoWidth) / 2,
+                        logoTop,
+                        logoWidth,
+                        logoHeight
+                    );
+                } catch (logoError) {
+                    console.warn("Could not draw PDF logo:", logoError);
+                }
+            }
+
+            // Keep the text title for later — logo already shows the company name.
+            // doc.setFontSize(18);
+            // doc.setFont("helvetica", "bold");
+            // doc.setTextColor(0, 0, 0);
+            // doc.text("DREAM AGENT CAR VISION", pageWidth / 2, titleY, {
+            //     align: "center",
+            // });
 
             doc.setFontSize(10);
             doc.setFont("helvetica", "normal");
             doc.text(
                 "57, Purana Palton Line, VIP Road, Dhaka-1000. Contact No : 01714211956",
                 pageWidth / 2,
-                26,
+                addressY,
                 { align: "center" }
             );
 
@@ -52,11 +121,11 @@ export const StockReportService = {
             doc.setFont("helvetica", "bold");
             const stockListText = "STOCK LIST";
             const stockListTextWidth = doc.getTextWidth(stockListText);
-            doc.text(stockListText, pageWidth / 2, 38, { align: "center" });
+            doc.text(stockListText, pageWidth / 2, stockListY, { align: "center" });
             // Draw underline for STOCK LIST
             doc.setDrawColor(0, 0, 0);
             doc.setLineWidth(0.5);
-            const underlineY = 38 + 2;
+            const underlineY = stockListY + 2;
             doc.line(
                 pageWidth / 2 - stockListTextWidth / 2,
                 underlineY,
@@ -66,7 +135,7 @@ export const StockReportService = {
 
             doc.setFontSize(10);
             doc.setFont("helvetica", "normal");
-            doc.text(dateStr, tableRightEdge, 38, { align: "right" });
+            doc.text(dateStr, tableRightEdge, stockListY, { align: "right" });
         };
 
         // Sort stocks by Make, Model, then Year (descending)
@@ -209,8 +278,8 @@ export const StockReportService = {
             autoTable(doc, {
                 head: [tableColumns],
                 body: tableData,
-                startY: 44,
-                margin: { top: 44 },
+                startY: headerBottom,
+                margin: { top: headerBottom },
                 styles: {
                     fontSize: 7,
                     cellPadding: 2,
