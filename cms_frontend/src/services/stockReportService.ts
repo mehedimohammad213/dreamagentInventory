@@ -165,6 +165,7 @@ export const StockReportService = {
         ];
 
         const viewLinkMap: Map<number, string> = new Map();
+        const soldStatusRows: Set<number> = new Set();
         const groupHeaderRows: Set<number> = new Set();
         let currentSl = 1;
         let lastMake = "";
@@ -198,10 +199,14 @@ export const StockReportService = {
             }
 
             try {
+                const effectiveStatus = getEffectiveStockStatus(stock);
                 const status =
-                    STATUS_SECTION_LABELS[getEffectiveStockStatus(stock)] ||
+                    STATUS_SECTION_LABELS[effectiveStatus] ||
                     stock.status ||
                     "N/A";
+                if (effectiveStatus === "sold") {
+                    soldStatusRows.add(tableData.length);
+                }
 
                 if (!car) {
                     tableData.push([
@@ -323,6 +328,8 @@ export const StockReportService = {
                             data.cell.viewUrl = viewUrl;
                             data.cell.originalText = data.cell.text;
                             data.cell.text = [];
+                        } else if (soldStatusRows.has(rowIndex)) {
+                            data.cell.styles.textColor = [255, 0, 0];
                         }
                     }
 
@@ -416,7 +423,8 @@ export const StockReportService = {
                                 doc.line(textX, underlineY, textX + textWidth, underlineY);
 
                                 if (lines.length > 1) {
-                                    doc.setTextColor(0, 0, 0);
+                                    const isSold = soldStatusRows.has(data.row.index);
+                                    doc.setTextColor(isSold ? 255 : 0, 0, 0);
                                     const remainingText = lines.slice(1).join("\n");
                                     doc.text(remainingText, textX, textY + lineHeight, {
                                         maxWidth: cellWidth - 2 * padding,
