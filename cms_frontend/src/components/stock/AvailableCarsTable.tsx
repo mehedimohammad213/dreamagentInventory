@@ -82,7 +82,7 @@ const AvailableCarsTable: React.FC<AvailableCarsTableProps> = ({
           <div className="animate-spin rounded-full h-12 w-12 border-2 border-gray-100 border-t-primary-600 mx-auto"></div>
         </div>
         <p className="text-gray-900 mt-4 font-medium">
-          Loading available cars...
+          Loading add stock list...
         </p>
         <p className="text-gray-500 text-sm mt-1">
           Fetching the latest vehicle details
@@ -98,10 +98,10 @@ const AvailableCarsTable: React.FC<AvailableCarsTableProps> = ({
           <Car className="w-20 h-20 text-primary-600" />
         </div>
         <h3 className="text-3xl font-bold text-gray-900 mb-4">
-          No pending cars
+          No cars in add stock list
         </h3>
         <p className="text-gray-600 mb-8 max-w-lg mx-auto text-lg">
-          All cars have stock entries. Try refreshing the page or check your connection.
+          There are no cars waiting to be added to stock. Use Add Stock List to create one, or try refreshing.
         </p>
         <button
           onClick={onRefresh}
@@ -120,10 +120,10 @@ const AvailableCarsTable: React.FC<AvailableCarsTableProps> = ({
           <Car className="w-20 h-20 text-primary-600" />
         </div>
         <h3 className="text-3xl font-bold text-gray-900 mb-4">
-          No pending cars
+          No cars in add stock list
         </h3>
         <p className="text-gray-600 mb-8 max-w-lg mx-auto text-lg">
-          There are no cars waiting to be added to stock, or all listed cars are marked sold.
+          There are no cars waiting to be added to stock.
         </p>
         <button
           onClick={onRefresh}
@@ -145,7 +145,7 @@ const AvailableCarsTable: React.FC<AvailableCarsTableProps> = ({
           No matches
         </h3>
         <p className="text-gray-600 mb-8 max-w-lg mx-auto text-lg">
-          No pending cars match your search or filters. Try clearing filters or using different keywords.
+          No cars in the add stock list match your search or filters. Try clearing filters or using different keywords.
         </p>
         <button
           onClick={onRefresh}

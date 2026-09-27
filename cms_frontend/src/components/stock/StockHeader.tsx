@@ -51,7 +51,7 @@ function TabDataCount({ n, active }: { n: number; active: boolean }) {
   );
 }
 
-const DEFAULT_VISIBLE_TABS: StockPageTab[] = ["all", "current"];
+const DEFAULT_VISIBLE_TABS: StockPageTab[] = ["all", "before", "current"];
 
 export const StockHeader: React.FC<StockHeaderProps> = ({
   activeTab,
@@ -168,6 +168,18 @@ export const StockHeader: React.FC<StockHeaderProps> = ({
                 >
                   All Stock
                   <TabDataCount n={tabCounts.all} active={activeTab === "all"} />
+                </button>
+              )}
+              {visibleTabs.includes("before") && (
+                <button
+                  onClick={() => onTabChange("before")}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${activeTab === "before"
+                    ? "bg-primary-600 text-white shadow-md shadow-primary-600/10"
+                    : "text-gray-600 hover:bg-gray-100"
+                    }`}
+                >
+                  Add Stock List
+                  <TabDataCount n={tabCounts.pending} active={activeTab === "before"} />
                 </button>
               )}
               {visibleTabs.includes("current") && (

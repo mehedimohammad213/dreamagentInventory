@@ -38,7 +38,7 @@ const StockManagement: React.FC = () => {
   const defaultTab: StockPageTab = isStockUserView ? "current" : "all";
   const allowedTabs: StockPageTab[] = isStockUserView
     ? ["current"]
-    : ["all", "current"];
+    : ["all", "before", "current"];
   const queryTab = searchParams.get("tab");
   const initialTab: StockPageTab =
     queryTab && allowedTabs.includes(queryTab as StockPageTab)
@@ -513,7 +513,7 @@ const StockManagement: React.FC = () => {
               onToDateFilterChange={pendingFilters.setToDateFilter}
               isGeneratingPDF={false}
               filterOptions={pendingFilters.filterOptions}
-              searchPlaceholder="Search pending cars by make, model, year, ref no, chassis…"
+              searchPlaceholder="Search add stock list by make, model, year, ref no, chassis…"
               onAddCar={handleAddStockClick}
             />
           ) : null}

@@ -349,7 +349,7 @@ const Header: React.FC = () => {
                               }}
                               className={stockTabClass("before")}
                             >
-                              <span>Pending Stock</span>
+                              <span>Add Stock List</span>
                             </Link>
                           )}
                           {allowedStockTabs.includes("current") && (
