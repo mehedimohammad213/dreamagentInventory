@@ -1,4 +1,4 @@
-import apiClient from "./apiClient";
+import { apiClient } from "./apiClient";
 import { API_BASE_URL } from "../config/api";
 
 export interface CarImageUploadResult {
