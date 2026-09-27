@@ -1,6 +1,10 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Stock } from "./stockApi";
+import {
+    getEffectiveStockStatus,
+    STATUS_SECTION_LABELS,
+} from "../utils/stockStatus";
 
 export const StockReportService = {
     generatePDF: async (stocks: Stock[], searchTerm?: string) => {
@@ -125,6 +129,11 @@ export const StockReportService = {
             }
 
             try {
+                const status =
+                    STATUS_SECTION_LABELS[getEffectiveStockStatus(stock)] ||
+                    stock.status ||
+                    "N/A";
+
                 if (!car) {
                     tableData.push([
                         (currentSl++).toString(),
@@ -134,7 +143,7 @@ export const StockReportService = {
                         "N/A",
                         "N/A",
                         "N/A",
-                        `Location: N/A\nStatus: ${stock.status || "N/A"}`,
+                        `View Cars\nStatus: ${status}`,
                     ]);
                     return;
                 }
@@ -161,9 +170,8 @@ export const StockReportService = {
                         ? parseFloat(car.price_amount).toLocaleString("en-IN")
                         : (car.price_amount as number).toLocaleString("en-IN")}`
                     : "Price on request";
-                const location = car.location || "N/A";
                 const viewLabel = "View Cars";
-                const viewText = `${viewLabel}\nLocation: ${location}`;
+                const viewText = `${viewLabel}\nStatus: ${status}`;
 
                 const baseUrl =
                     typeof window !== "undefined" && window.location?.origin
