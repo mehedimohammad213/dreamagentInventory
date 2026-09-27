@@ -379,22 +379,6 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
             </div>
           </div>
         </div>
-
-        {/* Sidebar footer card image */}
-        <div
-          className={`pt-2 ${collapsed ? "hidden" : "block"
-            }`}
-        >
-          <div className="p-2">
-            <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-              <img
-                src="/sidebar-footer.png"
-                alt="Sidebar footer"
-                className="w-full h-28 object-cover"
-              />
-            </div>
-          </div>
-        </div>
       </div>
     </aside>
   );
