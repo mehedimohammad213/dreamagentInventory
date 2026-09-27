@@ -13,7 +13,9 @@ import {
 import PurchaseHistoryTable from "../../components/purchase-history/PurchaseHistoryTable";
 import PurchaseHistoryLCView from "../../components/purchase-history/PurchaseHistoryLCView";
 import DeleteConfirmationModal from "@/components/common/DeleteConfirmationModal";
+import ChassisLookupModal from "@/components/common/ChassisLookupModal";
 import Pagination from "../../components/car/Pagination";
+import { findCarByChassis } from "@/utils/findCarByChassis";
 
 const PurchaseHistoryPage: React.FC = () => {
   const navigate = useNavigate();
@@ -190,15 +192,33 @@ const PurchaseHistoryPage: React.FC = () => {
     return items;
   }, [pagedLcKeys, groupedByLC]);
 
+  const [showChassisModal, setShowChassisModal] = useState(false);
+  const [pendingLcTemplate, setPendingLcTemplate] =
+    useState<PurchaseHistory | null>(null);
+
   const handleCreate = () => {
-    navigate("/admin/purchase-history/create", {
-      state: { returnPurchaseTab: activeTab },
-    });
+    setPendingLcTemplate(null);
+    setShowChassisModal(true);
   };
 
   const handleAddUnderLc = (template: PurchaseHistory) => {
+    setPendingLcTemplate(template);
+    setShowChassisModal(true);
+  };
+
+  const handleChassisValidate = async (chassis: string) => {
+    const car = await findCarByChassis(chassis);
+    if (!car) {
+      return "No vehicle found with this chassis number.";
+    }
+
+    setShowChassisModal(false);
     navigate("/admin/purchase-history/create", {
-      state: { lcTemplate: template, returnPurchaseTab: activeTab },
+      state: {
+        returnPurchaseTab: activeTab,
+        prefilledCar: car,
+        ...(pendingLcTemplate ? { lcTemplate: pendingLcTemplate } : {}),
+      },
     });
   };
 
@@ -548,6 +568,21 @@ const PurchaseHistoryPage: React.FC = () => {
         })()}
 
         {/* Delete Confirmation Modal */}
+        <ChassisLookupModal
+          isOpen={showChassisModal}
+          title={
+            pendingLcTemplate?.lc_number
+              ? `Add purchase under LC ${pendingLcTemplate.lc_number}`
+              : "Add Purchase History"
+          }
+          placeholder="Enter chassis number..."
+          onClose={() => {
+            setShowChassisModal(false);
+            setPendingLcTemplate(null);
+          }}
+          onValidate={handleChassisValidate}
+        />
+
         <DeleteConfirmationModal
           isOpen={showDeleteModal}
           title="Delete Purchase History"

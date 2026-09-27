@@ -14,6 +14,7 @@ interface PaymentHistoryModalProps {
   isOpen: boolean;
   mode: "create" | "update";
   paymentHistory?: PaymentHistory | null;
+  initialCar?: Car | null;
   onClose: () => void;
   onSubmit: (data: CreatePaymentHistoryData | UpdatePaymentHistoryData) => void;
 }
@@ -22,6 +23,7 @@ const PaymentHistoryModal: React.FC<PaymentHistoryModalProps> = ({
   isOpen,
   mode,
   paymentHistory,
+  initialCar = null,
   onClose,
   onSubmit,
 }) => {
@@ -108,7 +110,7 @@ const PaymentHistoryModal: React.FC<PaymentHistoryModalProps> = ({
     } else if (isOpen) {
       // Reset form for create mode
       setFormData({
-        car_id: null,
+        car_id: initialCar?.id ?? null,
         showroom_name: null,
         wholesaler_address: null,
         purchase_amount: null,
@@ -123,7 +125,7 @@ const PaymentHistoryModal: React.FC<PaymentHistoryModalProps> = ({
       });
       setInstallments([]);
     }
-  }, [paymentHistory, mode, isOpen]);
+  }, [paymentHistory, mode, isOpen, initialCar]);
 
   const fetchCars = async () => {
     try {
@@ -291,6 +293,8 @@ const PaymentHistoryModal: React.FC<PaymentHistoryModalProps> = ({
                             } else if (!selectedCar && paymentHistory?.car_id === formData.car_id && paymentHistory.car) {
                               // Extra check for nested car object
                               selectedCar = paymentHistory.car;
+                            } else if (!selectedCar && initialCar?.id === formData.car_id) {
+                              selectedCar = initialCar;
                             }
 
                             if (selectedCar) {

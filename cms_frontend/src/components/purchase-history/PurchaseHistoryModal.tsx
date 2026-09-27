@@ -81,6 +81,8 @@ interface PurchaseHistoryModalProps {
   variant?: "modal" | "page";
   /** When creating from LC view: copy LC fields from an existing row in that group */
   lcPrefillForCreate?: PurchaseHistory | null;
+  /** Car selected via chassis lookup before opening create */
+  prefilledCar?: Car | null;
 }
 
 const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
@@ -91,6 +93,7 @@ const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
   onSubmit,
   variant = "modal",
   lcPrefillForCreate = null,
+  prefilledCar = null,
 }) => {
   const effectiveOpen = variant === "page" || isOpen;
   const mainHistory = Array.isArray(purchaseHistory) ? purchaseHistory[0] : purchaseHistory;
@@ -386,9 +389,10 @@ const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
     } else if (!purchaseHistory && mode === "create") {
       // Reset form for create mode; optionally prefill LC from an existing group row
       const p = lcPrefillForCreate;
+      const prefilledCarId = prefilledCar?.id ?? null;
       setFormData({
-        car_ids: [],
-        car_id: null,
+        car_ids: prefilledCarId ? [prefilledCarId] : [],
+        car_id: prefilledCarId,
         purchase_date: null,
         purchase_amount: null,
         foreign_amount: null,
@@ -434,7 +438,7 @@ const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
       setEditingEntryIndex(null);
       hadCarEntriesInCreateRef.current = false;
     }
-  }, [purchaseHistory, mode, effectiveOpen, lcPrefillForCreate]);
+  }, [purchaseHistory, mode, effectiveOpen, lcPrefillForCreate, prefilledCar]);
 
   // foreign_amount / calculator input = bid_price + ser_com
   useEffect(() => {
@@ -1246,6 +1250,9 @@ const PurchaseHistoryModal: React.FC<PurchaseHistoryModalProps> = ({
                         let car: any = cars.find(c => c.id === id);
                         if (!car && mainHistory?.cars) {
                           car = mainHistory.cars.find((c: any) => c.id === id);
+                        }
+                        if (!car && prefilledCar?.id === id) {
+                          car = prefilledCar;
                         }
                         if (!car) return null;
 

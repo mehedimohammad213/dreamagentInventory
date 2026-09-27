@@ -15,7 +15,10 @@ import {
 import PaymentHistoryModal from "../../components/payment-history/PaymentHistoryModal";
 import PaymentHistoryTable from "../../components/payment-history/PaymentHistoryTable";
 import DeleteConfirmationModal from "@/components/common/DeleteConfirmationModal";
+import ChassisLookupModal from "@/components/common/ChassisLookupModal";
 import Pagination from "../../components/common/Pagination";
+import { findCarByChassis } from "@/utils/findCarByChassis";
+import type { Car } from "@/services/carApi";
 
 const PaymentHistoryPage: React.FC = () => {
   const navigate = useNavigate();
@@ -68,9 +71,24 @@ const PaymentHistoryPage: React.FC = () => {
     }
   };
 
+  const [showChassisModal, setShowChassisModal] = useState(false);
+  const [prefilledCar, setPrefilledCar] = useState<Car | null>(null);
+
   const handleCreate = () => {
+    setPrefilledCar(null);
+    setShowChassisModal(true);
+  };
+
+  const handleChassisValidate = async (chassis: string) => {
+    const car = await findCarByChassis(chassis);
+    if (!car) {
+      return "No vehicle found with this chassis number.";
+    }
+
+    setShowChassisModal(false);
     setSelectedPaymentHistory(null);
     setModalMode("create");
+    setPrefilledCar(car);
     setShowModal(true);
   };
 
@@ -232,13 +250,23 @@ const PaymentHistoryPage: React.FC = () => {
 
         {isAdmin && (
           <>
+            <ChassisLookupModal
+              isOpen={showChassisModal}
+              title="Add Payment History"
+              placeholder="Enter chassis number..."
+              onClose={() => setShowChassisModal(false)}
+              onValidate={handleChassisValidate}
+            />
+
             <PaymentHistoryModal
               isOpen={showModal}
               mode={modalMode}
               paymentHistory={selectedPaymentHistory}
+              initialCar={modalMode === "create" ? prefilledCar : null}
               onClose={() => {
                 setShowModal(false);
                 setSelectedPaymentHistory(null);
+                setPrefilledCar(null);
               }}
               onSubmit={handleModalSubmit}
             />

@@ -19,11 +19,14 @@ import {
   purchaseHistoryPath,
   type PurchasePageTab,
 } from "@/utils/purchaseNavigation";
+import type { Car } from "@/services/carApi";
 
 type LocationState = {
   records?: PurchaseHistory[];
   /** First row of an LC group — used to prefill LC fields on create */
   lcTemplate?: PurchaseHistory;
+  /** Car looked up by chassis before opening the create form */
+  prefilledCar?: Car;
   /** Tab to restore on `/admin/purchase-history` (from list / view). */
   returnPurchaseTab?: PurchasePageTab;
 };
@@ -258,6 +261,7 @@ const PurchaseHistoryEditor: React.FC = () => {
           mode={mode}
           purchaseHistory={purchaseHistory}
           lcPrefillForCreate={lcTemplateForCreate}
+          prefilledCar={isCreate ? navState?.prefilledCar ?? null : null}
           onClose={goBack}
           onSubmit={handleSubmit}
         />
