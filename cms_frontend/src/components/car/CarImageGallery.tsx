@@ -15,6 +15,8 @@ interface CarImageGalleryProps {
   onThumbnailClick: (index: number) => void;
   onImageClick: () => void;
   onDownloadPdf: (pdfUrl: string, fileName: string) => void;
+  onDownloadAllImages?: () => void;
+  isDownloadingAllImages?: boolean;
 }
 
 const CarImageGallery: React.FC<CarImageGalleryProps> = ({
@@ -27,6 +29,8 @@ const CarImageGallery: React.FC<CarImageGalleryProps> = ({
   onThumbnailClick,
   onImageClick,
   onDownloadPdf,
+  onDownloadAllImages,
+  isDownloadingAllImages = false,
 }) => {
   const hasMultiplePhotos = Boolean(car.photos && car.photos.length > 1);
   const { swipeHandlers, shouldIgnoreClick } = useSwipeNavigation(
@@ -61,6 +65,23 @@ const CarImageGallery: React.FC<CarImageGalleryProps> = ({
               No photos available
             </p>
           </div>
+        )}
+
+        {onDownloadAllImages && car.photos && car.photos.length > 0 && (
+          <button
+            type="button"
+            onClick={onDownloadAllImages}
+            disabled={isDownloadingAllImages}
+            aria-label={
+              isDownloadingAllImages ? "Downloading images" : "Download all images"
+            }
+            title={isDownloadingAllImages ? "Downloading..." : "Download all images"}
+            className="absolute top-3 right-3 z-10 inline-flex h-11 w-11 items-center justify-center rounded-full bg-primary-600 text-white shadow-md transition-colors hover:bg-primary-700 disabled:cursor-wait disabled:opacity-70"
+          >
+            <Download
+              className={`h-5 w-5 ${isDownloadingAllImages ? "animate-pulse" : ""}`}
+            />
+          </button>
         )}
 
         {/* Photo Navigation Arrows */}

@@ -6,9 +6,11 @@ import { useUrlSearchParams as useSearchParams } from "@/hooks/useUrlSearchParam
 
 
 import React, { useEffect, useState } from "react";
+import { toast } from "react-toastify";
 import { stockApi, Stock } from "../../services/stockApi";
 import { carApi, Car as CarType } from "../../services/carApi";
 import { useAuth } from "../../contexts/AuthContext";
+import { createStoredZip } from "../../utils/zipStore";
 import CarViewHeader from "../../components/car/CarViewHeader";
 import CarImageGallery from "../../components/car/CarImageGallery";
 import CarSpecifications from "../../components/car/CarSpecifications";
@@ -39,6 +41,7 @@ const StockGallery: React.FC = () => {
     filename: string;
   } | null>(null);
   const [isLoadingFile, setIsLoadingFile] = useState(false);
+  const [isDownloadingImages, setIsDownloadingImages] = useState(false);
 
   const isAdmin = user?.role === "admin";
 
@@ -217,6 +220,61 @@ const StockGallery: React.FC = () => {
     }
   };
 
+  const handleDownloadAllImages = async () => {
+    const photos = (car?.photos || []).filter((photo) => photo.url);
+    if (photos.length === 0 || isDownloadingImages) return;
+
+    setIsDownloadingImages(true);
+    try {
+      const files: Array<{ name: string; data: Uint8Array }> = [];
+
+      for (let index = 0; index < photos.length; index++) {
+        const photo = photos[index];
+        const response = await fetch(photo.url);
+        if (!response.ok) continue;
+
+        const data = new Uint8Array(await response.arrayBuffer());
+        files.push({
+          name: imageFileName(
+            photo.url,
+            index,
+            response.headers.get("content-type")
+          ),
+          data,
+        });
+      }
+
+      if (files.length === 0) {
+        toast.error("Could not download the images");
+        return;
+      }
+
+      const zip = createStoredZip(files);
+      const slug = [car?.year, car?.make, car?.model]
+        .filter(Boolean)
+        .join("-");
+      const url = window.URL.createObjectURL(zip);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${safeFilePart(String(slug)) || "stock"}-images.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success(
+        files.length === photos.length
+          ? "All images downloaded"
+          : `Downloaded ${files.length} of ${photos.length} images`
+      );
+    } catch (downloadError) {
+      console.error("Error downloading images:", downloadError);
+      toast.error("Failed to download images");
+    } finally {
+      setIsDownloadingImages(false);
+    }
+  };
+
   const getBackRoute = () => {
     // Default to stock management if no history
     return -1 as any;
@@ -276,6 +334,8 @@ const StockGallery: React.FC = () => {
                   setShowImageModal(true);
                 }}
                 onDownloadPdf={handleDownloadPdf}
+                onDownloadAllImages={handleDownloadAllImages}
+                isDownloadingAllImages={isDownloadingImages}
               />
 
               <CarSpecifications car={car} stockData={stock} />
@@ -323,5 +383,41 @@ const StockGallery: React.FC = () => {
     </div>
   );
 };
+
+function safeFilePart(value: string): string {
+  return value
+    .trim()
+    .replace(/[^\w.-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+function imageFileName(
+  url: string,
+  index: number,
+  contentType: string | null
+): string {
+  let base = "";
+  try {
+    const pathname = new URL(url, window.location.origin).pathname;
+    base = decodeURIComponent(pathname.split("/").pop() || "");
+  } catch {
+    base = "";
+  }
+
+  if (!/\.[a-z0-9]{2,5}$/i.test(base)) {
+    const ext = contentType?.includes("png")
+      ? "png"
+      : contentType?.includes("webp")
+        ? "webp"
+        : contentType?.includes("gif")
+          ? "gif"
+          : "jpg";
+    base = base ? `${base}.${ext}` : `image-${index + 1}.${ext}`;
+  }
+
+  const prefix = String(index + 1).padStart(2, "0");
+  return `${prefix}-${safeFilePart(base) || `image-${index + 1}.jpg`}`;
+}
 
 export default StockGallery;
