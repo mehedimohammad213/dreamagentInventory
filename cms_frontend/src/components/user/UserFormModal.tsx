@@ -28,33 +28,40 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
 }) => {
   useEffect(() => {
     if (!isOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKey);
+    };
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50">
       <div
-        className="absolute inset-0 bg-black/50"
+        className="absolute inset-0 bg-black/40"
         onClick={onClose}
         role="presentation"
       />
       <div
         role="dialog"
         aria-modal="true"
-        aria-labelledby="user-form-modal-title"
-        className="relative z-10 flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl"
-        onClick={(e) => e.stopPropagation()}
+        aria-labelledby="user-form-drawer-title"
+        className="absolute inset-y-0 right-0 flex h-full w-full max-w-md flex-col bg-white shadow-2xl"
       >
-        <div className="flex flex-shrink-0 items-center justify-between border-b border-gray-200 px-6 py-4">
+        <div className="flex flex-shrink-0 items-center justify-between border-b border-gray-200 px-5 py-4">
           <h2
-            id="user-form-modal-title"
-            className="text-xl font-semibold text-gray-900"
+            id="user-form-drawer-title"
+            className="text-lg font-semibold text-gray-900"
           >
             {title}
           </h2>
@@ -67,7 +74,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
           <UserDrawerForm
             user={user}
             onSubmit={onSubmit}
