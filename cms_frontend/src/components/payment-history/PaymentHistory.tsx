@@ -15,7 +15,6 @@ import {
 import PaymentHistoryModal from "../../components/payment-history/PaymentHistoryModal";
 import PaymentHistoryTable from "../../components/payment-history/PaymentHistoryTable";
 import DeleteConfirmationModal from "@/components/common/DeleteConfirmationModal";
-import ChassisLookupModal from "@/components/common/ChassisLookupModal";
 import Pagination from "../../components/common/Pagination";
 import { findCarByChassis } from "@/utils/findCarByChassis";
 import type { Car } from "@/services/carApi";
@@ -71,12 +70,13 @@ const PaymentHistoryPage: React.FC = () => {
     }
   };
 
-  const [showChassisModal, setShowChassisModal] = useState(false);
   const [prefilledCar, setPrefilledCar] = useState<Car | null>(null);
 
   const handleCreate = () => {
     setPrefilledCar(null);
-    setShowChassisModal(true);
+    setSelectedPaymentHistory(null);
+    setModalMode("create");
+    setShowModal(true);
   };
 
   const handleChassisValidate = async (chassis: string) => {
@@ -85,11 +85,7 @@ const PaymentHistoryPage: React.FC = () => {
       return "No vehicle found with this chassis number.";
     }
 
-    setShowChassisModal(false);
-    setSelectedPaymentHistory(null);
-    setModalMode("create");
     setPrefilledCar(car);
-    setShowModal(true);
   };
 
   const handleView = (paymentHistory: PaymentHistory) => {
@@ -250,19 +246,14 @@ const PaymentHistoryPage: React.FC = () => {
 
         {isAdmin && (
           <>
-            <ChassisLookupModal
-              isOpen={showChassisModal}
-              title="Add Payment History"
-              placeholder="Enter chassis number..."
-              onClose={() => setShowChassisModal(false)}
-              onValidate={handleChassisValidate}
-            />
-
             <PaymentHistoryModal
               isOpen={showModal}
               mode={modalMode}
               paymentHistory={selectedPaymentHistory}
               initialCar={modalMode === "create" ? prefilledCar : null}
+              onLookupChassis={
+                modalMode === "create" ? handleChassisValidate : undefined
+              }
               onClose={() => {
                 setShowModal(false);
                 setSelectedPaymentHistory(null);

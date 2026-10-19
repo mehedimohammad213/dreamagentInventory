@@ -15,6 +15,7 @@ interface PaymentHistoryModalProps {
   mode: "create" | "update";
   paymentHistory?: PaymentHistory | null;
   initialCar?: Car | null;
+  onLookupChassis?: (chassis: string) => Promise<string | void>;
   onClose: () => void;
   onSubmit: (data: CreatePaymentHistoryData | UpdatePaymentHistoryData) => void;
 }
@@ -24,6 +25,7 @@ const PaymentHistoryModal: React.FC<PaymentHistoryModalProps> = ({
   mode,
   paymentHistory,
   initialCar = null,
+  onLookupChassis,
   onClose,
   onSubmit,
 }) => {
@@ -55,12 +57,36 @@ const PaymentHistoryModal: React.FC<PaymentHistoryModalProps> = ({
   const [loadingCars, setLoadingCars] = useState(false);
   const [carSearchQuery, setCarSearchQuery] = useState("");
   const [isCarDropdownOpen, setIsCarDropdownOpen] = useState(false);
+  const [chassisInput, setChassisInput] = useState("");
+  const [chassisError, setChassisError] = useState("");
+  const [isCheckingChassis, setIsCheckingChassis] = useState(false);
+  const needsChassisLookup =
+    mode === "create" && !initialCar && Boolean(onLookupChassis);
 
   useEffect(() => {
-    if (isOpen) {
-      fetchCars();
-    }
+    if (!isOpen) return;
+    setChassisInput("");
+    setChassisError("");
+    setIsCheckingChassis(false);
+    fetchCars();
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [isOpen, onClose]);
 
   useEffect(() => {
     if (paymentHistory && mode === "update" && isOpen) {
@@ -227,6 +253,29 @@ const PaymentHistoryModal: React.FC<PaymentHistoryModalProps> = ({
     });
   };
 
+  const handleChassisSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!onLookupChassis) return;
+    if (!chassisInput.trim()) {
+      setChassisError("Chassis number is required.");
+      return;
+    }
+
+    setIsCheckingChassis(true);
+    setChassisError("");
+    try {
+      const error = await onLookupChassis(chassisInput.trim());
+      if (error) setChassisError(error);
+    } catch (error) {
+      console.error("Error validating chassis:", error);
+      setChassisError(
+        "An error occurred while validating the chassis number. Please try again."
+      );
+    } finally {
+      setIsCheckingChassis(false);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -248,30 +297,77 @@ const PaymentHistoryModal: React.FC<PaymentHistoryModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-6xl w-full max-h-[95vh] overflow-hidden my-8">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-primary-600 to-primary-800 text-white p-6 sticky top-0 z-10">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold">
-              {mode === "create" ? "Create Payment History" : "Update Payment History"}
-            </h2>
-            <button
-              onClick={onClose}
-              className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-xl transition-all"
-            >
-              <X className="w-6 h-6" />
-            </button>
-          </div>
+    <div className="fixed inset-0 z-50">
+      <div
+        className="absolute inset-0 bg-black/40"
+        onClick={onClose}
+        role="presentation"
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="payment-history-drawer-title"
+        className="absolute inset-y-0 right-0 flex h-full w-full max-w-xl flex-col bg-white shadow-2xl"
+      >
+        <div className="flex flex-shrink-0 items-center justify-between border-b border-gray-200 px-5 py-4">
+          <h2
+            id="payment-history-drawer-title"
+            className="text-lg font-semibold text-gray-900"
+          >
+            {mode === "create" ? "Add Payment History" : "Update Payment History"}
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full p-2 text-gray-500 transition-colors hover:bg-gray-100"
+            aria-label="Close"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
-        {/* Content */}
-        <form onSubmit={handleSubmit} className="overflow-y-auto max-h-[calc(95vh-120px)]">
-          <div className="p-6 space-y-6">
+        <form
+          onSubmit={needsChassisLookup ? handleChassisSubmit : handleSubmit}
+          className="flex min-h-0 flex-1 flex-col"
+        >
+          {needsChassisLookup ? (
+            <div className="flex-1 space-y-4 overflow-y-auto px-5 py-5">
+              <p className="text-sm text-gray-500">
+                Enter the vehicle&apos;s chassis number to continue.
+              </p>
+              <div>
+                <label
+                  htmlFor="payment-chassis-lookup"
+                  className="mb-2 block text-sm font-medium text-gray-700"
+                >
+                  Chassis Number
+                </label>
+                <input
+                  id="payment-chassis-lookup"
+                  type="text"
+                  value={chassisInput}
+                  disabled={isCheckingChassis}
+                  autoFocus
+                  placeholder="Enter chassis number..."
+                  onChange={(event) => {
+                    setChassisInput(event.target.value);
+                    if (chassisError) setChassisError("");
+                  }}
+                  className={`w-full rounded-xl border px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-primary-500 ${
+                    chassisError ? "border-red-500" : "border-gray-300"
+                  }`}
+                />
+                {chassisError && (
+                  <p className="mt-2 text-sm text-red-600">{chassisError}</p>
+                )}
+              </div>
+            </div>
+          ) : (
+          <div className="flex-1 space-y-6 overflow-y-auto px-5 py-5">
             {/* Car Information */}
             <div className="border-b border-gray-200 pb-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Car Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-4">
                 <div className="relative">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Car <span className="text-gray-400">(Searchable)</span>
@@ -382,7 +478,7 @@ const PaymentHistoryModal: React.FC<PaymentHistoryModalProps> = ({
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Wholesaler Information</h3>
               <div className="space-y-6">
                 {/* First row: 3 fields in same row */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Showroom Name
@@ -438,7 +534,7 @@ const PaymentHistoryModal: React.FC<PaymentHistoryModalProps> = ({
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Customer Information</h3>
               <div className="space-y-6">
                 {/* First row: 4 fields in same row */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Customer Name
@@ -485,7 +581,7 @@ const PaymentHistoryModal: React.FC<PaymentHistoryModalProps> = ({
                   </div>
                 </div>
                 {/* Second row: Email and Address */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Email
@@ -544,7 +640,7 @@ const PaymentHistoryModal: React.FC<PaymentHistoryModalProps> = ({
                       </div>
                       <div className="space-y-4">
                         {/* First row: 4 fields in same row */}
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Installment Date
@@ -597,7 +693,7 @@ const PaymentHistoryModal: React.FC<PaymentHistoryModalProps> = ({
                         </div>
                         {/* Second row: Bank fields (conditional) */}
                         {installment.payment_method === "Bank" && (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Bank Name
@@ -623,7 +719,7 @@ const PaymentHistoryModal: React.FC<PaymentHistoryModalProps> = ({
                           </div>
                         )}
                         {/* Third row: Description and Remarks */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 gap-4">
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Description
@@ -671,22 +767,31 @@ const PaymentHistoryModal: React.FC<PaymentHistoryModalProps> = ({
               )}
             </div>
 
-            {/* Actions */}
-            <div className="flex items-center justify-end gap-4 pt-6 border-t border-gray-200">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-6 py-2 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-6 py-2 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors font-medium"
-              >
-                {mode === "create" ? "Create" : "Update"}
-              </button>
             </div>
+          )}
+
+          <div className="flex flex-shrink-0 items-center justify-end gap-3 border-t border-gray-200 px-5 py-4">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isCheckingChassis}
+              className="rounded-xl border border-gray-300 px-5 py-2 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isCheckingChassis}
+              className="rounded-xl bg-primary-600 px-5 py-2 font-medium text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {needsChassisLookup
+                ? isCheckingChassis
+                  ? "Validating..."
+                  : "Proceed"
+                : mode === "create"
+                  ? "Create"
+                  : "Update"}
+            </button>
           </div>
         </form>
       </div>
