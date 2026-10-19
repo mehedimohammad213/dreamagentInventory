@@ -35,13 +35,25 @@ function dosDateTime(date: Date): { time: number; date: number } {
   return { time, date: dosDate };
 }
 
+/** Copy into an ArrayBuffer-backed view so Blob accepts it under strict lib types. */
+function asBlobPart(bytes: Uint8Array): BlobPart {
+  const { buffer, byteOffset, byteLength } = bytes;
+  if (buffer instanceof ArrayBuffer) {
+    return new Uint8Array(buffer, byteOffset, byteLength);
+  }
+  const copy = new Uint8Array(byteLength);
+  copy.set(bytes);
+  return copy;
+}
+
 /** Build a zip archive that stores files without extra compression. */
 export function createStoredZip(entries: ZipEntry[]): Blob {
   const stamp = dosDateTime(new Date());
   const encoder = new TextEncoder();
   const parts: BlobPart[] = [];
-  const centralParts: Uint8Array[] = [];
+  const centralParts: BlobPart[] = [];
   let offset = 0;
+  let centralSize = 0;
 
   for (const entry of entries) {
     const nameBytes = encoder.encode(entry.name);
@@ -83,12 +95,11 @@ export function createStoredZip(entries: ZipEntry[]): Blob {
     centralView.setUint32(42, offset, true);
     central.set(nameBytes, 46);
 
-    parts.push(local, entry.data);
-    centralParts.push(central);
+    parts.push(asBlobPart(local), asBlobPart(entry.data));
+    centralParts.push(asBlobPart(central));
+    centralSize += central.length;
     offset += local.length + entry.data.length;
   }
-
-  const centralSize = centralParts.reduce((sum, part) => sum + part.length, 0);
   const end = new Uint8Array(22);
   const endView = new DataView(end.buffer);
   endView.setUint32(0, 0x06054b50, true);
@@ -100,7 +111,7 @@ export function createStoredZip(entries: ZipEntry[]): Blob {
   endView.setUint32(16, offset, true);
   endView.setUint16(20, 0, true);
 
-  return new Blob([...parts, ...centralParts, end], {
+  return new Blob([...parts, ...centralParts, asBlobPart(end)], {
     type: "application/zip",
   });
 }
