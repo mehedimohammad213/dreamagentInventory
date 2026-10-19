@@ -11,7 +11,6 @@ import {
   HomeIcon,
   CarIcon,
   ShoppingCartIcon,
-  UserIcon,
   BarChartIcon,
   CogIcon,
   LogOutIcon,
@@ -124,12 +123,7 @@ const Header: React.FC = () => {
   ];
 
   const userNavItems: NavItem[] = [
-    { path: "/dashboard", label: "Dashboard", icon: BarChartIcon },
-    // { path: "/cars", label: "Cars", icon: CarIcon },
     { path: "/admin/stock", label: "Stock", icon: PackageIcon },
-    { path: "/admin/payment-history", label: "Payment", icon: CreditCard },
-    { path: "/cart", label: "Cart", icon: ShoppingCartIcon },
-    { path: "/orders", label: "Orders", icon: UserIcon },
   ];
 
   const navItems = user?.role === "admin" ? adminNavItems : userNavItems;
@@ -138,12 +132,8 @@ const Header: React.FC = () => {
     return null;
   }
 
-  const allowedStockTabs: StockPageTab[] =
-    user.role === "admin"
-      ? ["all", "before", "current"]
-      : ["current"];
-  const defaultStockTab: StockPageTab =
-    user.role === "user" ? "current" : "all";
+  const allowedStockTabs: StockPageTab[] = ["all", "before", "current"];
+  const defaultStockTab: StockPageTab = "all";
   const tabParam = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search).get("tab");
   const effectiveStockTab: StockPageTab =
     tabParam && allowedStockTabs.includes(tabParam as StockPageTab)

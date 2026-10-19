@@ -9,7 +9,7 @@ import CarCatalog from "./CarCatalog";
 export default function CarCatalogRoute() {
   const { user } = useAuth();
   if (user?.role === "user") {
-    return <Redirect href="/dashboard" />;
+    return <Redirect href="/admin/stock" />;
   }
   return <CarCatalog />;
 }

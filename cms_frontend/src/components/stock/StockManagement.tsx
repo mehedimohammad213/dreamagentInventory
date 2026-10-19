@@ -40,10 +40,8 @@ const StockManagement: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const isStockUserView = user?.role === "user";
-  const defaultTab: StockPageTab = isStockUserView ? "current" : "all";
-  const allowedTabs: StockPageTab[] = isStockUserView
-    ? ["current"]
-    : ["all", "before", "current"];
+  const defaultTab: StockPageTab = "all";
+  const allowedTabs: StockPageTab[] = ["all", "before", "current"];
   const queryTab = searchParams.get("tab");
   const initialTab: StockPageTab =
     queryTab && allowedTabs.includes(queryTab as StockPageTab)

@@ -44,8 +44,8 @@ const Login: React.FC = () => {
         console.log("Redirecting to admin dashboard");
         navigate("/admin"); // Admin dashboard
       } else {
-        console.log("Redirecting to user dashboard");
-        navigate("/dashboard"); // User dashboard
+        console.log("Redirecting to user stock");
+        navigate("/admin/stock");
       }
     }
   }, [user, navigate]);

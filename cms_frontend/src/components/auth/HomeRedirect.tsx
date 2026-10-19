@@ -20,8 +20,8 @@ const HomeRedirect: React.FC = () => {
           console.log("HomeRedirect: Redirecting admin to /admin");
           navigate("/admin");
         } else {
-          console.log("HomeRedirect: Redirecting user to /dashboard");
-          navigate("/dashboard");
+          console.log("HomeRedirect: Redirecting user to /admin/stock");
+          navigate("/admin/stock");
         }
       } else {
         console.log(

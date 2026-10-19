@@ -50,12 +50,8 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
   const isOnStockRoute = pathname === "/admin/stock";
   const [stockSubmenuOpen, setStockSubmenuOpen] = useState(isOnStockRoute);
 
-  const allowedStockTabs: StockPageTab[] =
-    user.role === "admin"
-      ? ["all", "before", "current"]
-      : ["current"];
-  const defaultStockTab: StockPageTab =
-    user.role === "user" ? "current" : "all";
+  const allowedStockTabs: StockPageTab[] = ["all", "before", "current"];
+  const defaultStockTab: StockPageTab = "all";
   const tabParam = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search).get("tab");
   const effectiveStockTab: StockPageTab =
     tabParam && allowedStockTabs.includes(tabParam as StockPageTab)
@@ -85,11 +81,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
   ];
 
   const userNavItems: NavItem[] = [
-    { path: "/dashboard", label: "Dashboard", icon: BarChartIcon },
     { path: "/admin/stock", label: "Stock", icon: PackageIcon },
-    { path: "/admin/payment-history", label: "Payment", icon: CreditCard },
-    // { path: "/cart", label: "Cart", icon: ShoppingCartIcon },
-    // { path: "/orders", label: "Orders", icon: UserIcon },
   ];
 
   const navItems = user.role === "admin" ? adminNavItems : userNavItems;
