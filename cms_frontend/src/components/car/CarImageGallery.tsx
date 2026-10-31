@@ -75,10 +75,7 @@ const CarImageGallery: React.FC<CarImageGalleryProps> = ({
   }, [shareOpen]);
 
   const shareListing = () => {
-    const title = [car.year, car.make, car.model].filter(Boolean).join(" ");
-    const url = window.location.href;
-    const text = title ? `Check out this ${title}` : "Check out this vehicle";
-    return { title: title || "Vehicle", url, text };
+    return { url: window.location.href };
   };
 
   const openShareLink = (href: string) => {
@@ -116,14 +113,14 @@ const CarImageGallery: React.FC<CarImageGalleryProps> = ({
   };
 
   const shareWithOtherApps = async () => {
-    const { title, text, url } = shareListing();
+    const { url } = shareListing();
     if (!navigator.share) {
       await copyShareLink();
       return;
     }
 
     try {
-      await navigator.share({ title, text, url });
+      await navigator.share({ url });
       setShareOpen(false);
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
@@ -206,9 +203,9 @@ const CarImageGallery: React.FC<CarImageGalleryProps> = ({
                     icon={<FaWhatsapp className="h-4 w-4" />}
                     iconClassName="bg-[#25D366]"
                     onClick={() => {
-                      const { text, url } = shareListing();
+                      const { url } = shareListing();
                       openShareLink(
-                        `https://wa.me/?text=${encodeURIComponent(`${text} ${url}`)}`
+                        `https://wa.me/?text=${encodeURIComponent(url)}`
                       );
                     }}
                   />
@@ -234,9 +231,9 @@ const CarImageGallery: React.FC<CarImageGalleryProps> = ({
                     icon={<FaTelegram className="h-4 w-4" />}
                     iconClassName="bg-[#229ED9]"
                     onClick={() => {
-                      const { text, url } = shareListing();
+                      const { url } = shareListing();
                       openShareLink(
-                        `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`
+                        `https://t.me/share/url?url=${encodeURIComponent(url)}`
                       );
                     }}
                   />
@@ -245,9 +242,9 @@ const CarImageGallery: React.FC<CarImageGalleryProps> = ({
                     icon={<FaXTwitter className="h-4 w-4" />}
                     iconClassName="bg-black"
                     onClick={() => {
-                      const { text, url } = shareListing();
+                      const { url } = shareListing();
                       openShareLink(
-                        `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`
+                        `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}`
                       );
                     }}
                   />
