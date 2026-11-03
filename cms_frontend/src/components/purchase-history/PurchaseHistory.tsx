@@ -16,7 +16,7 @@ import DeleteConfirmationModal from "@/components/common/DeleteConfirmationModal
 import ChassisLookupModal from "@/components/common/ChassisLookupModal";
 import Pagination from "../../components/car/Pagination";
 import {
-  chassisAlreadyExistsMessage,
+  chassisAlreadyExistsPurchaseMessage,
   findCarByChassis,
 } from "@/utils/findCarByChassis";
 
@@ -228,8 +228,8 @@ const PurchaseHistoryPage: React.FC = () => {
       return;
     }
 
-    // Same rule as Add Stock List: existing chassis cannot be created again.
-    const alreadyListed = await chassisAlreadyExistsMessage(chassis);
+    // Existing chassis cannot be created again; show LC name when known.
+    const alreadyListed = await chassisAlreadyExistsPurchaseMessage(chassis);
     if (alreadyListed) return alreadyListed;
 
     setShowChassisModal(false);

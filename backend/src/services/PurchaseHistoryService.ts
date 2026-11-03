@@ -138,17 +138,27 @@ async function assertCarsNotAlreadyPurchased(carIds, exceptPurchaseId = null) {
 
   for (const carId of carIds) {
     const result = await query(
-      `SELECT id FROM car_purchase_history
-       WHERE car_id = $1
-         AND ($2::int IS NULL OR purchase_history_id <> $2)
-       LIMIT 1`,
+      `SELECT ph.lc_number
+       FROM car_purchase_history cph
+       INNER JOIN purchase_history ph ON ph.id = cph.purchase_history_id
+       WHERE cph.car_id = $1
+         AND ($2::int IS NULL OR cph.purchase_history_id <> $2)
+       ORDER BY ph.created_at DESC
+       LIMIT 5`,
       [carId, exceptPurchaseId]
     );
     if (result.rows.length) {
-      throw new ValidationError(
-        { car_ids: ['This chassis number is already available in the car list.'] },
-        'This chassis number is already available in the car list.'
-      );
+      const lcNumbers = [
+        ...new Set(
+          result.rows
+            .map((row) => (row.lc_number || '').toString().trim())
+            .filter(Boolean)
+        ),
+      ];
+      const message = lcNumbers.length
+        ? `This chassis number is already under LC ${lcNumbers.join(', ')}.`
+        : 'This chassis number is already available in the car list.';
+      throw new ValidationError({ car_ids: [message] }, message);
     }
   }
 }
@@ -190,6 +200,18 @@ function applyPurchaseFilters(qb, filters) {
         .orWhere('invoice_number', 'ILIKE', term)
         .orWhere('lc_bank_name', 'ILIKE', term);
     });
+  }
+
+  if (isFilled(filters.car_id)) {
+    const carId = toInt(filters.car_id);
+    qb.whereRaw(
+      `EXISTS (
+        SELECT 1 FROM car_purchase_history cph
+        WHERE cph.purchase_history_id = purchase_history.id
+          AND cph.car_id = ?
+      )`,
+      [carId]
+    );
   }
 
   if (isFilled(filters.purchase_date_from)) {

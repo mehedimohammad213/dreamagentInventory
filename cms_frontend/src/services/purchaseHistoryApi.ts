@@ -108,6 +108,7 @@ class PurchaseHistoryApi {
   // Get all purchase histories
   async getPurchaseHistories(params?: {
     search?: string;
+    car_id?: number;
     purchase_date_from?: string;
     purchase_date_to?: string;
     lc_month?: string;
