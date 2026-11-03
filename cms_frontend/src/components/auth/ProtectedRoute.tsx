@@ -5,11 +5,13 @@ import Redirect from "@/components/auth/Redirect";
 import React from 'react';
 import { useAuth } from "@/contexts/AuthContext";
 
+export type AppRole = 'admin' | 'user' | 'accountant';
+
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  role?: 'admin' | 'user';
+  role?: AppRole;
   /** If set, the user must have one of these roles (takes precedence over `role`). */
-  roles?: ('admin' | 'user')[];
+  roles?: AppRole[];
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
@@ -32,7 +34,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   if (roles && roles.length > 0) {
-    if (!roles.includes(user.role as 'admin' | 'user')) {
+    if (!roles.includes(user.role as AppRole)) {
       return <Redirect href="/" />;
     }
   } else if (role && user.role !== role) {

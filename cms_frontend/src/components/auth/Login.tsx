@@ -43,6 +43,8 @@ const Login: React.FC = () => {
       if (user.role === "admin") {
         console.log("Redirecting to admin dashboard");
         navigate("/admin"); // Admin dashboard
+      } else if (user.role === "accountant") {
+        navigate("/admin/accounting");
       } else {
         console.log("Redirecting to user stock");
         navigate("/admin/stock");

@@ -9,6 +9,7 @@ import {
   UpdateInstallmentData,
 } from "../../services/paymentHistoryApi";
 import { carApi, Car } from "../../services/carApi";
+import { bankAccountApi, BankAccount } from "../../services/bankAccountApi";
 
 interface PaymentHistoryModalProps {
   isOpen: boolean;
@@ -54,6 +55,7 @@ const PaymentHistoryModal: React.FC<PaymentHistoryModalProps> = ({
 
   const [installments, setInstallments] = useState<UpdateInstallmentData[]>([]);
   const [cars, setCars] = useState<Car[]>([]);
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [loadingCars, setLoadingCars] = useState(false);
   const [carSearchQuery, setCarSearchQuery] = useState("");
   const [isCarDropdownOpen, setIsCarDropdownOpen] = useState(false);
@@ -69,6 +71,7 @@ const PaymentHistoryModal: React.FC<PaymentHistoryModalProps> = ({
     setChassisError("");
     setIsCheckingChassis(false);
     fetchCars();
+    fetchBankAccounts();
   }, [isOpen]);
 
   useEffect(() => {
@@ -126,6 +129,8 @@ const PaymentHistoryModal: React.FC<PaymentHistoryModalProps> = ({
             balance: runningBalance, // Use calculated running balance
             remarks: inst.remarks,
             status: inst.status,
+            bank_account_id: inst.bank_account_id ?? null,
+            cheque_status: (inst as any).cheque_status ?? null,
           };
         });
 
@@ -170,6 +175,26 @@ const PaymentHistoryModal: React.FC<PaymentHistoryModalProps> = ({
     } finally {
       setLoadingCars(false);
     }
+  };
+
+  const fetchBankAccounts = async () => {
+    try {
+      const response = await bankAccountApi.list({ is_active: true });
+      setBankAccounts(Array.isArray(response.data) ? response.data : []);
+    } catch (error) {
+      console.error("Error fetching bank accounts:", error);
+      setBankAccounts([]);
+    }
+  };
+
+  const accountsForMethod = (method: "Bank" | "Cash" | null | undefined) => {
+    if (method === "Cash") {
+      return bankAccounts.filter((a) => a.account_type === "cash");
+    }
+    if (method === "Bank") {
+      return bankAccounts.filter((a) => a.account_type === "bank");
+    }
+    return bankAccounts;
   };
 
   const recalculateBalances = (
@@ -218,6 +243,7 @@ const PaymentHistoryModal: React.FC<PaymentHistoryModalProps> = ({
           balance: null, // Will be calculated
           remarks: null,
           status: null,
+          bank_account_id: null,
         },
       ];
       return recalculateBalances(newInstallments, formData.purchase_amount);
@@ -238,10 +264,37 @@ const PaymentHistoryModal: React.FC<PaymentHistoryModalProps> = ({
   ) => {
     setInstallments((prev) => {
       const newInstallments = prev.map((inst, i) => {
-        if (i === index) {
-          return { ...inst, [field]: value };
+        if (i !== index) return inst;
+
+        if (field === "payment_method") {
+          const method = (value || null) as "Bank" | "Cash" | null;
+          const options = accountsForMethod(method);
+          const preferred =
+            options.find((a) => a.id === inst.bank_account_id) || options[0] || null;
+          return {
+            ...inst,
+            payment_method: method,
+            bank_account_id: preferred?.id ?? null,
+            bank_name:
+              method === "Bank"
+                ? preferred?.bank_name || preferred?.name || inst.bank_name
+                : null,
+          };
         }
-        return inst;
+
+        if (field === "bank_account_id") {
+          const account = bankAccounts.find((a) => a.id === Number(value));
+          return {
+            ...inst,
+            bank_account_id: value ? Number(value) : null,
+            bank_name:
+              inst.payment_method === "Bank"
+                ? account?.bank_name || account?.name || null
+                : inst.bank_name,
+          };
+        }
+
+        return { ...inst, [field]: value };
       });
 
       // If amount changed, recalculate all balances
@@ -691,31 +744,71 @@ const PaymentHistoryModal: React.FC<PaymentHistoryModalProps> = ({
                             />
                           </div>
                         </div>
-                        {/* Second row: Bank fields (conditional) */}
-                        {installment.payment_method === "Bank" && (
+                        {/* Account + bank metadata */}
+                        {installment.payment_method && (
                           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Bank Name
+                                Deposit to account
                               </label>
-                              <input
-                                type="text"
-                                value={installment.bank_name || ""}
-                                onChange={(e) => updateInstallment(index, "bank_name", e.target.value || null)}
+                              <select
+                                value={installment.bank_account_id || ""}
+                                onChange={(e) =>
+                                  updateInstallment(
+                                    index,
+                                    "bank_account_id",
+                                    e.target.value ? Number(e.target.value) : null
+                                  )
+                                }
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100"
-                              />
+                              >
+                                <option value="">Select account</option>
+                                {accountsForMethod(installment.payment_method).map((account) => (
+                                  <option key={account.id} value={account.id}>
+                                    {account.name}
+                                    {account.account_number ? ` · ${account.account_number}` : ""}
+                                  </option>
+                                ))}
+                              </select>
                             </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Cheque Number
-                              </label>
-                              <input
-                                type="text"
-                                value={installment.cheque_number || ""}
-                                onChange={(e) => updateInstallment(index, "cheque_number", e.target.value || null)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100"
-                              />
-                            </div>
+                            {installment.payment_method === "Bank" && (
+                              <>
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Cheque Number
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={installment.cheque_number || ""}
+                                    onChange={(e) =>
+                                      updateInstallment(index, "cheque_number", e.target.value || null)
+                                    }
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Cheque Status
+                                  </label>
+                                  <select
+                                    value={installment.cheque_status || ""}
+                                    onChange={(e) =>
+                                      updateInstallment(
+                                        index,
+                                        "cheque_status",
+                                        e.target.value || null
+                                      )
+                                    }
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100"
+                                  >
+                                    <option value="">N/A</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="cleared">Cleared</option>
+                                    <option value="bounced">Bounced</option>
+                                  </select>
+                                </div>
+                              </>
+                            )}
                           </div>
                         )}
                         {/* Third row: Description and Remarks */}

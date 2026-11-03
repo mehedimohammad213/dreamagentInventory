@@ -12,6 +12,8 @@ export interface Installment {
   balance: number | null;
   remarks: string | null;
   status: string | null;
+  bank_account_id: number | null;
+  cheque_status: "pending" | "cleared" | "bounced" | null;
   created_at: string;
   updated_at: string;
 }
@@ -65,6 +67,8 @@ export interface CreateInstallmentData {
   balance?: number | null;
   remarks?: string | null;
   status?: string | null;
+  bank_account_id?: number | null;
+  cheque_status?: "pending" | "cleared" | "bounced" | null;
 }
 
 export interface UpdateInstallmentData extends CreateInstallmentData {

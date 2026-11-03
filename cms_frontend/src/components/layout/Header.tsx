@@ -18,6 +18,8 @@ import {
   XIcon,
   PackageIcon,
   UsersIcon,
+  Landmark,
+  Calculator,
   SettingsIcon,
   ChevronDownIcon,
   FolderIcon,
@@ -118,6 +120,8 @@ const Header: React.FC = () => {
       label: "Payment",
       icon: CreditCard,
     },
+    { path: "/admin/accounts", label: "Accounts", icon: Landmark },
+    { path: "/admin/accounting", label: "Accounting", icon: Calculator },
     { path: "/admin/orders", label: "Order", icon: ShoppingCartIcon },
     { path: "/admin/users", label: "User", icon: UsersIcon },
   ];
@@ -126,7 +130,16 @@ const Header: React.FC = () => {
     { path: "/admin/stock", label: "Stock", icon: PackageIcon },
   ];
 
-  const navItems = user?.role === "admin" ? adminNavItems : userNavItems;
+  const accountantNavItems: NavItem[] = [
+    { path: "/admin/accounts", label: "Accounts", icon: Landmark },
+    { path: "/admin/accounting", label: "Accounting", icon: Calculator },
+  ];
+  const navItems =
+    user?.role === "admin"
+      ? adminNavItems
+      : user?.role === "accountant"
+        ? accountantNavItems
+        : userNavItems;
 
   if (!user) {
     return null;

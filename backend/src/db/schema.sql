@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS users (
   email VARCHAR(255) NOT NULL UNIQUE,
   email_verified_at TIMESTAMPTZ NULL,
   password VARCHAR(255) NOT NULL,
-  role VARCHAR(32) NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user')),
+  role VARCHAR(32) NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user', 'accountant')),
   remember_token VARCHAR(100) NULL,
   created_at TIMESTAMPTZ NULL,
   updated_at TIMESTAMPTZ NULL
@@ -251,6 +251,13 @@ CREATE TABLE IF NOT EXISTS car_purchase_history (
   updated_at TIMESTAMPTZ NULL
 );
 
+-- Per-car share of an LC/purchase batch (multi-car allocation)
+ALTER TABLE car_purchase_history
+  ADD COLUMN IF NOT EXISTS allocated_cost NUMERIC(15, 2) NULL;
+
+CREATE INDEX IF NOT EXISTS car_purchase_history_purchase_id_index
+  ON car_purchase_history (purchase_history_id);
+
 -- Payment history
 CREATE TABLE IF NOT EXISTS payment_history (
   id BIGSERIAL PRIMARY KEY,
@@ -284,6 +291,155 @@ CREATE TABLE IF NOT EXISTS installments (
   created_at TIMESTAMPTZ NULL,
   updated_at TIMESTAMPTZ NULL
 );
+
+-- ─── Accounting: Bank / Cash accounts ────────────────────────
+CREATE TABLE IF NOT EXISTS bank_accounts (
+  id BIGSERIAL PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  bank_name VARCHAR(255) NULL,
+  branch_name VARCHAR(255) NULL,
+  account_number VARCHAR(64) NULL,
+  account_type VARCHAR(16) NOT NULL DEFAULT 'bank'
+    CHECK (account_type IN ('bank', 'cash')),
+  currency CHAR(3) NOT NULL DEFAULT 'BDT',
+  opening_balance NUMERIC(15, 2) NOT NULL DEFAULT 0,
+  opening_balance_date DATE NULL,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  notes TEXT NULL,
+  created_at TIMESTAMPTZ NULL,
+  updated_at TIMESTAMPTZ NULL
+);
+
+CREATE INDEX IF NOT EXISTS bank_accounts_type_index ON bank_accounts (account_type);
+CREATE INDEX IF NOT EXISTS bank_accounts_active_index ON bank_accounts (is_active);
+
+CREATE TABLE IF NOT EXISTS bank_transactions (
+  id BIGSERIAL PRIMARY KEY,
+  bank_account_id BIGINT NOT NULL REFERENCES bank_accounts(id) ON DELETE RESTRICT,
+  txn_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  type VARCHAR(16) NOT NULL CHECK (type IN ('in', 'out', 'transfer')),
+  amount NUMERIC(15, 2) NOT NULL CHECK (amount >= 0),
+  reference VARCHAR(255) NULL,
+  notes TEXT NULL,
+  source_type VARCHAR(32) NULL,
+  source_id BIGINT NULL,
+  related_account_id BIGINT NULL REFERENCES bank_accounts(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NULL,
+  updated_at TIMESTAMPTZ NULL
+);
+
+CREATE INDEX IF NOT EXISTS bank_transactions_account_date_index
+  ON bank_transactions (bank_account_id, txn_date);
+CREATE INDEX IF NOT EXISTS bank_transactions_source_index
+  ON bank_transactions (source_type, source_id);
+CREATE UNIQUE INDEX IF NOT EXISTS bank_transactions_source_unique
+  ON bank_transactions (source_type, source_id)
+  WHERE source_type IS NOT NULL AND source_id IS NOT NULL;
+
+-- Link installments to bank/cash accounts (safe on existing DBs)
+ALTER TABLE installments
+  ADD COLUMN IF NOT EXISTS bank_account_id BIGINT NULL REFERENCES bank_accounts(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS installments_bank_account_id_index
+  ON installments (bank_account_id);
+
+-- Operating expenses (other costs)
+CREATE TABLE IF NOT EXISTS expenses (
+  id BIGSERIAL PRIMARY KEY,
+  expense_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  category VARCHAR(64) NOT NULL DEFAULT 'other',
+  amount NUMERIC(15, 2) NOT NULL CHECK (amount >= 0),
+  description TEXT NULL,
+  bank_account_id BIGINT NOT NULL REFERENCES bank_accounts(id) ON DELETE RESTRICT,
+  payment_method VARCHAR(16) NULL CHECK (payment_method IS NULL OR payment_method IN ('Bank', 'Cash')),
+  reference VARCHAR(255) NULL,
+  created_at TIMESTAMPTZ NULL,
+  updated_at TIMESTAMPTZ NULL
+);
+
+CREATE INDEX IF NOT EXISTS expenses_date_index ON expenses (expense_date);
+CREATE INDEX IF NOT EXISTS expenses_category_index ON expenses (category);
+CREATE INDEX IF NOT EXISTS expenses_bank_account_id_index ON expenses (bank_account_id);
+
+-- Per-car extra costs (repair, transport, reconditioning, etc.)
+CREATE TABLE IF NOT EXISTS car_extra_costs (
+  id BIGSERIAL PRIMARY KEY,
+  car_id BIGINT NOT NULL REFERENCES cars(id) ON DELETE CASCADE,
+  cost_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  category VARCHAR(64) NOT NULL DEFAULT 'other',
+  amount NUMERIC(15, 2) NOT NULL CHECK (amount >= 0),
+  description TEXT NULL,
+  bank_account_id BIGINT NULL REFERENCES bank_accounts(id) ON DELETE SET NULL,
+  payment_method VARCHAR(16) NULL CHECK (payment_method IS NULL OR payment_method IN ('Bank', 'Cash')),
+  created_at TIMESTAMPTZ NULL,
+  updated_at TIMESTAMPTZ NULL
+);
+
+CREATE INDEX IF NOT EXISTS car_extra_costs_car_id_index ON car_extra_costs (car_id);
+CREATE INDEX IF NOT EXISTS car_extra_costs_date_index ON car_extra_costs (cost_date);
+
+-- Supplier / purchase payments (pay LC, duty, CNF, exporter from Bank/Cash)
+CREATE TABLE IF NOT EXISTS supplier_payments (
+  id BIGSERIAL PRIMARY KEY,
+  payment_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  category VARCHAR(64) NOT NULL DEFAULT 'other',
+  amount NUMERIC(15, 2) NOT NULL CHECK (amount >= 0),
+  description TEXT NULL,
+  supplier_name VARCHAR(255) NULL,
+  purchase_history_id BIGINT NULL REFERENCES purchase_history(id) ON DELETE SET NULL,
+  car_id BIGINT NULL REFERENCES cars(id) ON DELETE SET NULL,
+  bank_account_id BIGINT NOT NULL REFERENCES bank_accounts(id) ON DELETE RESTRICT,
+  payment_method VARCHAR(16) NULL CHECK (payment_method IS NULL OR payment_method IN ('Bank', 'Cash')),
+  reference VARCHAR(255) NULL,
+  created_at TIMESTAMPTZ NULL,
+  updated_at TIMESTAMPTZ NULL
+);
+
+CREATE INDEX IF NOT EXISTS supplier_payments_date_index ON supplier_payments (payment_date);
+CREATE INDEX IF NOT EXISTS supplier_payments_purchase_index ON supplier_payments (purchase_history_id);
+CREATE INDEX IF NOT EXISTS supplier_payments_bank_account_index ON supplier_payments (bank_account_id);
+
+-- Allow accountant role on existing DBs
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+ALTER TABLE users
+  ADD CONSTRAINT users_role_check CHECK (role IN ('admin', 'user', 'accountant'));
+
+-- Cheque status on installments
+ALTER TABLE installments
+  ADD COLUMN IF NOT EXISTS cheque_status VARCHAR(16) NULL
+    CHECK (cheque_status IS NULL OR cheque_status IN ('pending', 'cleared', 'bounced'));
+
+-- Accounting period lock (YYYY-MM)
+CREATE TABLE IF NOT EXISTS accounting_periods (
+  id BIGSERIAL PRIMARY KEY,
+  year_month CHAR(7) NOT NULL UNIQUE,
+  is_locked BOOLEAN NOT NULL DEFAULT FALSE,
+  locked_at TIMESTAMPTZ NULL,
+  locked_by BIGINT NULL REFERENCES users(id) ON DELETE SET NULL,
+  notes TEXT NULL,
+  created_at TIMESTAMPTZ NULL,
+  updated_at TIMESTAMPTZ NULL
+);
+
+CREATE INDEX IF NOT EXISTS accounting_periods_locked_index ON accounting_periods (is_locked);
+
+-- Audit trail for finance mutations
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT NULL REFERENCES users(id) ON DELETE SET NULL,
+  action VARCHAR(32) NOT NULL,
+  entity_type VARCHAR(64) NOT NULL,
+  entity_id BIGINT NULL,
+  summary VARCHAR(500) NULL,
+  before_data JSONB NULL,
+  after_data JSONB NULL,
+  ip_address VARCHAR(45) NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS audit_logs_entity_index ON audit_logs (entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS audit_logs_user_index ON audit_logs (user_id);
+CREATE INDEX IF NOT EXISTS audit_logs_created_at_index ON audit_logs (created_at DESC);
 
 -- Queue / cache / jobs (optional Laravel parity tables)
 CREATE TABLE IF NOT EXISTS jobs (

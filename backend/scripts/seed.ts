@@ -11,23 +11,26 @@ async function seed(): Promise<void> {
   const adminHash = await bcrypt.hash('admin123', config.bcryptRounds);
   const userHash = await bcrypt.hash('user123', config.bcryptRounds);
 
-  await query(
-    `INSERT INTO users (name, username, email, password, role, created_at, updated_at)
-     VALUES
-       ($1, $2, $3, $4, 'admin', NOW(), NOW()),
-       ($5, $6, $7, $8, 'user', NOW(), NOW())
-     ON CONFLICT (email) DO NOTHING`,
-    [
-      'Admin User',
-      'admin',
-      'admin@carselling.com',
-      adminHash,
-      'John Doe',
-      'user',
-      'user@carselling.com',
-      userHash,
-    ]
-  );
+  const existingAdmin = await query(`SELECT id FROM users WHERE username = 'admin' LIMIT 1`);
+  if (!existingAdmin.rows.length) {
+    await query(
+      `INSERT INTO users (name, username, email, password, role, created_at, updated_at)
+       VALUES
+         ($1, $2, $3, $4, 'admin', NOW(), NOW()),
+         ($5, $6, $7, $8, 'user', NOW(), NOW())
+       ON CONFLICT (email) DO NOTHING`,
+      [
+        'Admin User',
+        'admin',
+        'admin@carselling.com',
+        adminHash,
+        'John Doe',
+        'user',
+        'user@carselling.com',
+        userHash,
+      ]
+    );
+  }
 
   const existingCats = await query<CategoryRow>(`SELECT id, name FROM categories LIMIT 1`);
   if (!existingCats.rows.length) {
@@ -53,6 +56,20 @@ async function seed(): Promise<void> {
         [sedanId]
       );
     }
+  }
+
+  const cashAccount = await query(
+    `SELECT id FROM bank_accounts WHERE account_type = 'cash' ORDER BY id ASC LIMIT 1`
+  );
+  if (!cashAccount.rows.length) {
+    await query(
+      `INSERT INTO bank_accounts (
+         name, account_type, currency, opening_balance, opening_balance_date,
+         is_active, notes, created_at, updated_at
+       ) VALUES (
+         'Cash', 'cash', 'BDT', 0, CURRENT_DATE, TRUE, 'Default cash account', NOW(), NOW()
+       )`
+    );
   }
 
   console.log('Seed complete.');

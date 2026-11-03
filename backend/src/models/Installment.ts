@@ -5,12 +5,14 @@ export class Installment extends Model {
   static fillable = [
     'payment_history_id', 'installment_date', 'description', 'amount',
     'payment_method', 'bank_name', 'cheque_number', 'balance', 'remarks', 'status',
+    'bank_account_id', 'cheque_status',
   ];
   static casts = {
     id: 'integer',
     payment_history_id: 'integer',
     amount: 'number',
     balance: 'number',
+    bank_account_id: 'integer',
   };
 
   declare id: number;
@@ -24,6 +26,8 @@ export class Installment extends Model {
   declare balance?: number | null;
   declare remarks?: string | null;
   declare status?: string | null;
+  declare bank_account_id?: number | null;
+  declare cheque_status?: 'pending' | 'cleared' | 'bounced' | null;
 }
 
 export default Installment;

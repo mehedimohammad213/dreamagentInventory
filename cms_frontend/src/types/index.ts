@@ -18,7 +18,7 @@ export interface Car {
 export interface User {
   id: string;
   username: string;
-  role: "admin" | "user";
+  role: "admin" | "user" | "accountant";
   email: string;
   name: string;
 }

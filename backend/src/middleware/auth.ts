@@ -62,4 +62,21 @@ export function admin(req: Request, res: Response, next: NextFunction): void | R
   return next();
 }
 
-export default { auth, optionalAuth, admin };
+/** Admin or accountant — read finance / accounting reports */
+export function financeRead(req: Request, res: Response, next: NextFunction): void | Response {
+  const role = req.user?.role;
+  if (!req.user || (role !== 'admin' && role !== 'accountant')) {
+    return fail(res, 'Forbidden', 403);
+  }
+  return next();
+}
+
+/** Admin only — mutate money / lock periods */
+export function financeWrite(req: Request, res: Response, next: NextFunction): void | Response {
+  if (!req.user || req.user.role !== 'admin') {
+    return fail(res, 'Forbidden', 403);
+  }
+  return next();
+}
+
+export default { auth, optionalAuth, admin, financeRead, financeWrite };

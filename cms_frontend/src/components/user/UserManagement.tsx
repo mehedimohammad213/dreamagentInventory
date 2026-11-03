@@ -97,6 +97,8 @@ const UserManagement: React.FC = () => {
     switch (role) {
       case "admin":
         return "bg-red-100 text-red-700 border border-red-200";
+      case "accountant":
+        return "bg-emerald-100 text-emerald-700 border border-emerald-200";
       case "user":
         return "bg-primary-100 text-primary-700 border border-primary-200";
       default:

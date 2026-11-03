@@ -5,6 +5,14 @@ import Car from '../models/Car.js';
 import { withTransaction } from '../db/pool.js';
 import { validate, toInt, toFloat } from '../utils/validate.js';
 import { ValidationError, NotFoundError } from '../lib/errors.js';
+import {
+  resolveAccountForPaymentMethod,
+  upsertSourceTransaction,
+  deleteSourceTransaction,
+  deleteSourceTransactions,
+} from './BankAccountService.js';
+import { assertPeriodOpen } from './PeriodLockService.js';
+import { writeAudit } from './AuditService.js';
 
 const PAYMENT_SCALAR_FIELDS = [
   'car_id', 'showroom_name', 'wholesaler_address', 'purchase_amount', 'purchase_date',
@@ -21,7 +29,8 @@ const SORTABLE_COLUMNS = new Set([
 
 const INSTALLMENT_FIELDS = [
   'installment_date', 'description', 'amount', 'payment_method',
-  'bank_name', 'cheque_number', 'balance', 'remarks',
+  'bank_name', 'cheque_number', 'balance', 'remarks', 'bank_account_id',
+  'cheque_status',
 ];
 
 function isFilled(value) {
@@ -47,11 +56,84 @@ function pickInstallmentData(source) {
   const out = {};
   for (const key of INSTALLMENT_FIELDS) {
     if (source[key] === undefined) continue;
-    out[key] = key === 'amount' || key === 'balance'
-      ? toFloat(source[key], source[key])
-      : source[key];
+    if (key === 'amount' || key === 'balance') {
+      out[key] = toFloat(source[key], source[key]);
+    } else if (key === 'bank_account_id') {
+      out[key] = source[key] === '' || source[key] == null ? null : toInt(source[key], null);
+    } else {
+      out[key] = source[key];
+    }
   }
   return out;
+}
+
+async function syncInstallmentBankTransaction(installment, client = null) {
+  if (!installment?.id) return;
+
+  const amount = toFloat(installment.amount, 0);
+  const chequeStatus = installment.cheque_status || null;
+
+  // Bounced cheques should not stay as money in the account
+  if (
+    !amount ||
+    amount <= 0 ||
+    !installment.payment_method ||
+    chequeStatus === 'bounced'
+  ) {
+    await deleteSourceTransaction('installment', installment.id, client);
+    return;
+  }
+
+  const account = await resolveAccountForPaymentMethod(
+    installment.payment_method,
+    installment.bank_account_id,
+    client
+  );
+
+  if (!account) {
+    await deleteSourceTransaction('installment', installment.id, client);
+    return;
+  }
+
+  if (installment.bank_account_id !== account.id) {
+    await installment.update({ bank_account_id: account.id }, client);
+    installment.bank_account_id = account.id;
+  }
+
+  await upsertSourceTransaction(
+    {
+      bank_account_id: account.id,
+      txn_date: installment.installment_date || new Date().toISOString().slice(0, 10),
+      type: 'in',
+      amount,
+      reference: installment.cheque_number || `Installment #${installment.id}`,
+      notes: installment.description || installment.remarks || null,
+      source_type: 'installment',
+      source_id: installment.id,
+    },
+    client
+  );
+}
+
+async function assertPaymentDatesOpen(paymentDate, installments = []) {
+  if (paymentDate) await assertPeriodOpen(paymentDate, 'purchase_date');
+  for (let i = 0; i < (installments || []).length; i += 1) {
+    const d = installments[i]?.installment_date;
+    if (d) await assertPeriodOpen(d, `installments.${i}.installment_date`);
+  }
+}
+
+function recomputeInstallmentBalances(saleAmount, installments) {
+  const sale = toFloat(saleAmount, 0) || 0;
+  let running = 0;
+  return (installments || []).map((item) => {
+    const amount = toFloat(item?.amount, 0) || 0;
+    running += amount;
+    return {
+      ...item,
+      balance: Math.max(sale - running, 0),
+    };
+  });
 }
 
 function parseInstallments(body) {
@@ -113,6 +195,8 @@ function validateInstallments(installments, { isUpdate = false } = {}) {
       cheque_number: 'nullable|string|max:255',
       balance: 'nullable|numeric',
       remarks: 'nullable|string',
+      bank_account_id: 'nullable|numeric',
+      cheque_status: 'nullable|string|in:pending,cleared,bounced',
     });
 
     if (!ok) {
@@ -233,7 +317,7 @@ export async function listPaymentHistories(filters) {
   };
 }
 
-export async function createPaymentHistory(body) {
+export async function createPaymentHistory(body, meta = {}) {
   const parsedBody = parseInstallments(body);
 
   const { ok, errors } = validatePaymentPayload(parsedBody);
@@ -244,15 +328,24 @@ export async function createPaymentHistory(body) {
   await assertCarNotAlreadyPaid(parsedBody.car_id);
 
   const data = pickPaymentData(parsedBody);
+  const normalizedInstallments = Array.isArray(parsedBody.installments)
+    ? recomputeInstallmentBalances(data.purchase_amount, parsedBody.installments)
+    : null;
+
+  await assertPaymentDatesOpen(data.purchase_date, normalizedInstallments || []);
 
   const paymentHistory = await withTransaction(async (client) => {
     const created = await PaymentHistory.create(data, client);
 
-    if (Array.isArray(parsedBody.installments)) {
-      for (const installmentData of parsedBody.installments) {
+    if (normalizedInstallments) {
+      for (const installmentData of normalizedInstallments) {
         const payload = pickInstallmentData(installmentData);
         payload.payment_history_id = created.id;
-        await Installment.create(payload, client);
+        if (payload.payment_method === 'Bank' && !payload.cheque_status && payload.cheque_number) {
+          payload.cheque_status = 'pending';
+        }
+        const installment = await Installment.create(payload, client);
+        await syncInstallmentBankTransaction(installment, client);
       }
     }
 
@@ -260,6 +353,15 @@ export async function createPaymentHistory(body) {
   });
 
   await paymentHistory.loadRelations();
+  await writeAudit({
+    userId: meta.userId,
+    action: 'create',
+    entityType: 'payment_history',
+    entityId: paymentHistory.id,
+    summary: `Created payment history #${paymentHistory.id}`,
+    after: paymentHistory.toJSON?.() || paymentHistory,
+    ip: meta.ip,
+  });
   return {
     status: 201,
     message: 'Payment history created successfully',
@@ -280,7 +382,7 @@ export async function getPaymentHistory(id) {
   };
 }
 
-export async function updatePaymentHistory(id, body) {
+export async function updatePaymentHistory(id, body, meta = {}) {
   const paymentHistory = await PaymentHistory.find(id);
   if (!paymentHistory) {
     throw new NotFoundError('Payment history not found');
@@ -305,14 +407,43 @@ export async function updatePaymentHistory(id, body) {
   }
 
   const data = pickPaymentData(parsedBody);
+  const saleAmount = Object.prototype.hasOwnProperty.call(data, 'purchase_amount')
+    ? data.purchase_amount
+    : paymentHistory.purchase_amount;
+
+  await assertPeriodOpen(
+    paymentHistory.purchase_date || data.purchase_date || new Date(),
+    'purchase_date'
+  );
+  await assertPaymentDatesOpen(
+    data.purchase_date || paymentHistory.purchase_date,
+    parsedBody.installments || []
+  );
+
+  const before = { ...paymentHistory.toJSON() };
 
   await withTransaction(async (client) => {
     await paymentHistory.update(data, client);
 
     if (Object.prototype.hasOwnProperty.call(parsedBody, 'installments') && Array.isArray(parsedBody.installments)) {
-      const existingIds = parsedBody.installments
+      const normalizedInstallments = recomputeInstallmentBalances(
+        saleAmount,
+        parsedBody.installments
+      );
+
+      const existingIds = normalizedInstallments
         .map((item) => toInt(item?.id))
         .filter((id) => id != null);
+
+      const existingRows = await Installment.query(client)
+        .where('payment_history_id', paymentHistory.id)
+        .get();
+      const removedIds = existingRows
+        .map((row) => Number(row.id))
+        .filter((id) => !existingIds.includes(id));
+      if (removedIds.length) {
+        await deleteSourceTransactions('installment', removedIds, client);
+      }
 
       let deleteQb = Installment.query(client).where('payment_history_id', paymentHistory.id);
       if (existingIds.length) {
@@ -320,17 +451,20 @@ export async function updatePaymentHistory(id, body) {
       }
       await deleteQb.delete();
 
-      for (const installmentData of parsedBody.installments) {
+      for (const installmentData of normalizedInstallments) {
         if (installmentData?.id != null && installmentData.id !== '') {
           const installment = await Installment.find(toInt(installmentData.id), client);
           if (installment && installment.payment_history_id === paymentHistory.id) {
             const payload = pickInstallmentData(installmentData);
             await installment.update(payload, client);
+            const fresh = await Installment.find(installment.id, client);
+            await syncInstallmentBankTransaction(fresh, client);
           }
         } else {
           const payload = pickInstallmentData(installmentData);
           payload.payment_history_id = paymentHistory.id;
-          await Installment.create(payload, client);
+          const created = await Installment.create(payload, client);
+          await syncInstallmentBankTransaction(created, client);
         }
       }
     }
@@ -338,19 +472,54 @@ export async function updatePaymentHistory(id, body) {
 
   const fresh = await PaymentHistory.find(paymentHistory.id);
   await fresh.loadRelations();
+  await writeAudit({
+    userId: meta.userId,
+    action: 'update',
+    entityType: 'payment_history',
+    entityId: fresh.id,
+    summary: `Updated payment history #${fresh.id}`,
+    before,
+    after: fresh.toJSON?.() || fresh,
+    ip: meta.ip,
+  });
   return {
     message: 'Payment history updated successfully',
     data: fresh,
   };
 }
 
-export async function deletePaymentHistory(id) {
+export async function deletePaymentHistory(id, meta = {}) {
   const paymentHistory = await PaymentHistory.find(id);
   if (!paymentHistory) {
     throw new NotFoundError('Payment history not found');
   }
 
-  await paymentHistory.delete();
+  await assertPeriodOpen(
+    paymentHistory.purchase_date || new Date(),
+    'purchase_date'
+  );
+
+  const before = paymentHistory.toJSON();
+
+  await withTransaction(async (client) => {
+    const installments = await Installment.query(client)
+      .where('payment_history_id', paymentHistory.id)
+      .get();
+    const installmentIds = installments.map((row) => row.id);
+    await deleteSourceTransactions('installment', installmentIds, client);
+    await paymentHistory.delete(client);
+  });
+
+  await writeAudit({
+    userId: meta.userId,
+    action: 'delete',
+    entityType: 'payment_history',
+    entityId: id,
+    summary: `Deleted payment history #${id}`,
+    before,
+    ip: meta.ip,
+  });
+
   return {
     message: 'Payment history deleted successfully',
     data: null,

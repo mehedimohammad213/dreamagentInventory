@@ -32,7 +32,7 @@ const UserDrawerForm: React.FC<UserDrawerFormProps> = ({
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"admin" | "user">("user");
+  const [role, setRole] = useState<"admin" | "user" | "accountant">("user");
 
   useEffect(() => {
     if (user) {
@@ -40,7 +40,9 @@ const UserDrawerForm: React.FC<UserDrawerFormProps> = ({
       setUsername(user.username);
       setEmail(user.email);
       setPassword("");
-      setRole((user.role === "admin" ? "admin" : "user") as "admin" | "user");
+      setRole(
+        user.role === "admin" || user.role === "accountant" ? user.role : "user"
+      );
     } else {
       const z = emptyCreate();
       setName(z.name);
@@ -144,6 +146,7 @@ const UserDrawerForm: React.FC<UserDrawerFormProps> = ({
         >
           <option value="user">User</option>
           <option value="admin">Admin</option>
+          <option value="accountant">Accountant</option>
         </select>
       </div>
 

@@ -36,7 +36,7 @@ export interface CreateUserPayload {
   username: string;
   email: string;
   password: string;
-  role: "admin" | "user";
+  role: "admin" | "user" | "accountant";
 }
 
 export interface UpdateUserPayload {
@@ -44,7 +44,7 @@ export interface UpdateUserPayload {
   username: string;
   email: string;
   password?: string;
-  role: "admin" | "user";
+  role: "admin" | "user" | "accountant";
 }
 
 export interface MutationResponse {

@@ -19,6 +19,8 @@ const HomeRedirect: React.FC = () => {
         if (user.role === "admin") {
           console.log("HomeRedirect: Redirecting admin to /admin");
           navigate("/admin");
+        } else if (user.role === "accountant") {
+          navigate("/admin/accounting");
         } else {
           console.log("HomeRedirect: Redirecting user to /admin/stock");
           navigate("/admin/stock");

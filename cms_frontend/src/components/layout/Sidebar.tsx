@@ -16,6 +16,8 @@ import {
   PackageIcon,
   UsersIcon,
   CreditCard,
+  Landmark,
+  Calculator,
 } from "lucide-react";
 import type { StockPageTab } from "@/components/stock/StockHeader";
 
@@ -76,6 +78,8 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
     { path: "/admin/stock", label: "Stock", icon: PackageIcon },
     { path: "/admin/purchase-history", label: "Purchase", icon: BdtIcon },
     { path: "/admin/payment-history", label: "Payment", icon: CreditCard },
+    { path: "/admin/accounts", label: "Accounts", icon: Landmark },
+    { path: "/admin/accounting", label: "Accounting", icon: Calculator },
     // { path: "/admin/orders", label: "Orders", icon: ShoppingCartIcon },
     { path: "/admin/users", label: "Users", icon: UsersIcon },
   ];
@@ -84,7 +88,17 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
     { path: "/admin/stock", label: "Stock", icon: PackageIcon },
   ];
 
-  const navItems = user.role === "admin" ? adminNavItems : userNavItems;
+  const accountantNavItems: NavItem[] = [
+    { path: "/admin/accounts", label: "Accounts", icon: Landmark },
+    { path: "/admin/accounting", label: "Accounting", icon: Calculator },
+  ];
+
+  const navItems =
+    user.role === "admin"
+      ? adminNavItems
+      : user.role === "accountant"
+        ? accountantNavItems
+        : userNavItems;
 
   useEffect(() => {
     // Keep only the current route submenu open.

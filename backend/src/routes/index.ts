@@ -18,6 +18,11 @@ import * as OrderController from '../controllers/OrderController.js';
 import * as PurchaseHistoryController from '../controllers/PurchaseHistoryController.js';
 import * as PaymentHistoryController from '../controllers/PaymentHistoryController.js';
 import * as UserController from '../controllers/UserController.js';
+import * as BankAccountController from '../controllers/BankAccountController.js';
+import * as ExpenseController from '../controllers/ExpenseController.js';
+import * as AccountingController from '../controllers/AccountingController.js';
+import * as SupplierPaymentController from '../controllers/SupplierPaymentController.js';
+import * as CarExtraCostController from '../controllers/CarExtraCostController.js';
 
 const router = Router();
 
@@ -128,6 +133,56 @@ router.post('/payment-history', auth, PaymentHistoryController.store);
 router.get('/payment-history/:id', auth, PaymentHistoryController.show);
 router.put('/payment-history/:id', auth, PaymentHistoryController.update);
 router.delete('/payment-history/:id', auth, PaymentHistoryController.destroy);
+
+// Bank / Cash accounts
+router.get('/bank-accounts', auth, BankAccountController.index);
+router.post('/bank-accounts', auth, BankAccountController.store);
+router.get('/bank-accounts/transactions', auth, BankAccountController.transactions);
+router.post('/bank-accounts/transactions', auth, BankAccountController.storeTransaction);
+router.post('/bank-accounts/transfer', auth, BankAccountController.transfer);
+router.get('/bank-accounts/:id', auth, BankAccountController.show);
+router.put('/bank-accounts/:id', auth, BankAccountController.update);
+router.delete('/bank-accounts/:id', auth, BankAccountController.destroy);
+
+// Expenses
+router.get('/expenses', auth, ExpenseController.index);
+router.post('/expenses', auth, ExpenseController.store);
+router.get('/expenses/:id', auth, ExpenseController.show);
+router.put('/expenses/:id', auth, ExpenseController.update);
+router.delete('/expenses/:id', auth, ExpenseController.destroy);
+
+// Supplier payments (purchase money out)
+router.get('/supplier-payments', auth, SupplierPaymentController.index);
+router.post('/supplier-payments', auth, SupplierPaymentController.store);
+router.get('/supplier-payments/:id', auth, SupplierPaymentController.show);
+router.put('/supplier-payments/:id', auth, SupplierPaymentController.update);
+router.delete('/supplier-payments/:id', auth, SupplierPaymentController.destroy);
+
+// Per-car extra costs
+router.get('/car-extra-costs', auth, CarExtraCostController.index);
+router.post('/car-extra-costs', auth, CarExtraCostController.store);
+router.put('/car-extra-costs/:id', auth, CarExtraCostController.update);
+router.delete('/car-extra-costs/:id', auth, CarExtraCostController.destroy);
+
+// Accounting calculations / reports
+router.get('/accounting/summary', auth, AccountingController.summary);
+router.get('/accounting/cost-per-car', auth, AccountingController.costPerCar);
+router.get('/accounting/collection-per-car', auth, AccountingController.collectionPerCar);
+router.get('/accounting/car-profit', auth, AccountingController.carProfit);
+router.get('/accounting/customer-ledger', auth, AccountingController.customerLedger);
+router.get('/accounting/inventory-valuation', auth, AccountingController.inventoryValuation);
+router.get('/accounting/cash-book', auth, AccountingController.cashBook);
+router.get('/accounting/receivable-aging', auth, AccountingController.receivableAging);
+router.put(
+  '/accounting/lc-allocations/:purchaseHistoryId',
+  auth,
+  AccountingController.setLcAllocations
+);
+router.get('/accounting/periods', auth, AccountingController.listPeriods);
+router.post('/accounting/periods/lock', auth, AccountingController.lockPeriod);
+router.post('/accounting/periods/:yearMonth/unlock', auth, AccountingController.unlockPeriod);
+router.get('/accounting/audit-logs', auth, AccountingController.auditLogs);
+router.get('/accounting/export', auth, AccountingController.exportExcel);
 
 // Stocks writes
 router.post('/stocks', auth, StockController.store);
