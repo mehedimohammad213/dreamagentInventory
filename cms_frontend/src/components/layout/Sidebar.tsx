@@ -198,7 +198,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
                           onClick={() => {
                             setStockSubmenuOpen(true);
                             setPurchaseSubmenuOpen(false);
-                          }}
+                    }}
                         >
                           <span className="truncate">All Stock</span>
                         </Link>
@@ -210,7 +210,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
                           onClick={() => {
                             setStockSubmenuOpen(true);
                             setPurchaseSubmenuOpen(false);
-                          }}
+                    }}
                         >
                           <span className="truncate">Add Stock List</span>
                         </Link>
@@ -222,7 +222,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
                           onClick={() => {
                             setStockSubmenuOpen(true);
                             setPurchaseSubmenuOpen(false);
-                          }}
+                    }}
                         >
                           <span className="truncate">Current Stock</span>
                         </Link>
@@ -234,7 +234,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
                         onClick={() => {
                           setStockSubmenuOpen(true);
                           setPurchaseSubmenuOpen(false);
-                        }}
+                    }}
                       >
                         <span className="truncate">Available Stock</span>
                       </Link>
@@ -244,7 +244,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
                         onClick={() => {
                           setStockSubmenuOpen(true);
                           setPurchaseSubmenuOpen(false);
-                        }}
+                    }}
                       >
                         <span className="truncate">Sold Out</span>
                       </Link>
@@ -309,7 +309,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
                         onClick={() => {
                           setPurchaseSubmenuOpen(true);
                           setStockSubmenuOpen(false);
-                        }}
+                    }}
                       >
                         <span className="truncate">LC History</span>
                       </Link>
@@ -319,7 +319,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
                         onClick={() => {
                           setPurchaseSubmenuOpen(true);
                           setStockSubmenuOpen(false);
-                        }}
+                    }}
                       >
                         <span className="truncate">Purchase History</span>
                       </Link>
@@ -336,7 +336,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
                 onClick={() => {
                   setStockSubmenuOpen(false);
                   setPurchaseSubmenuOpen(false);
-                }}
+                    }}
                 className={`flex items-center w-full transition-colors py-2 rounded-none ${collapsed
                   ? "justify-center px-0 border-l-0"
                   : "justify-start gap-3 px-3 border-l-4 border-transparent"
@@ -354,8 +354,8 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
                   {item.label}
                 </span>
               </Link>
-            );
-          })}
+            )
+                    })}
         </nav>
 
         <div

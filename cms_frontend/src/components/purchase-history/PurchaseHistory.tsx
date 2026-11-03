@@ -15,7 +15,10 @@ import PurchaseHistoryLCView from "../../components/purchase-history/PurchaseHis
 import DeleteConfirmationModal from "@/components/common/DeleteConfirmationModal";
 import ChassisLookupModal from "@/components/common/ChassisLookupModal";
 import Pagination from "../../components/car/Pagination";
-import { findCarByChassis } from "@/utils/findCarByChassis";
+import {
+  chassisAlreadyExistsMessage,
+  findCarByChassis,
+} from "@/utils/findCarByChassis";
 
 const PurchaseHistoryPage: React.FC = () => {
   const navigate = useNavigate();
@@ -207,17 +210,34 @@ const PurchaseHistoryPage: React.FC = () => {
   };
 
   const handleChassisValidate = async (chassis: string) => {
-    const car = await findCarByChassis(chassis);
-    if (!car) {
-      return "No vehicle found with this chassis number.";
+    // Add under an existing LC still needs a car already in the list.
+    if (pendingLcTemplate) {
+      const car = await findCarByChassis(chassis);
+      if (!car) {
+        return "No vehicle found with this chassis number.";
+      }
+
+      setShowChassisModal(false);
+      navigate("/admin/purchase-history/create", {
+        state: {
+          returnPurchaseTab: activeTab,
+          prefilledCar: car,
+          lcTemplate: pendingLcTemplate,
+        },
+      });
+      return;
     }
 
+    // Same rule as Add Stock List: existing chassis cannot be created again.
+    const alreadyListed = await chassisAlreadyExistsMessage(chassis);
+    if (alreadyListed) return alreadyListed;
+
     setShowChassisModal(false);
-    navigate("/admin/purchase-history/create", {
+    navigate("/create-car", {
       state: {
+        prefilledChassisNo: chassis,
+        afterCreate: "purchase",
         returnPurchaseTab: activeTab,
-        prefilledCar: car,
-        ...(pendingLcTemplate ? { lcTemplate: pendingLcTemplate } : {}),
       },
     });
   };
@@ -575,7 +595,8 @@ const PurchaseHistoryPage: React.FC = () => {
               ? `Add purchase under LC ${pendingLcTemplate.lc_number}`
               : "Add Purchase History"
           }
-          placeholder="Enter chassis number..."
+          description="Enter the vehicle's chassis number to proceed."
+          placeholder="Enter unique chassis number..."
           onClose={() => {
             setShowChassisModal(false);
             setPendingLcTemplate(null);

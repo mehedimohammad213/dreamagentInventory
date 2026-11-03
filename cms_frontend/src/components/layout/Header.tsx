@@ -156,7 +156,7 @@ const Header: React.FC = () => {
 
     setMobileStockSubmenuOpen(false);
     setMobilePurchaseSubmenuOpen(false);
-  }, [pathname]);
+                    }, [pathname]);
 
   type PurchaseTab = "lc_wise" | "history";
   const allowedPurchaseTabs: PurchaseTab[] = ["lc_wise", "history"];
@@ -207,8 +207,8 @@ const Header: React.FC = () => {
                       </span>
                     )}
                   </Link>
-                );
-              })}
+                )
+                    })}
             </nav>
 
             {/* Right side actions - Right side */}
@@ -300,7 +300,7 @@ const Header: React.FC = () => {
                         onClick={() => {
                           setMobileStockSubmenuOpen((v) => !v);
                           setMobilePurchaseSubmenuOpen(false);
-                        }}
+                    }}
                         className={`flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium transition-colors ${isActiveRoute
                           ? "bg-primary-50 text-primary-700 dark:bg-primary-900 dark:text-blue-200"
                           : "text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
@@ -323,7 +323,7 @@ const Header: React.FC = () => {
                                 setMobileMenuOpen(false);
                                 setMobileStockSubmenuOpen(true);
                                 setMobilePurchaseSubmenuOpen(false);
-                              }}
+                    }}
                               className={stockTabClass("all")}
                             >
                               <span>All Stock</span>
@@ -336,7 +336,7 @@ const Header: React.FC = () => {
                                 setMobileMenuOpen(false);
                                 setMobileStockSubmenuOpen(true);
                                 setMobilePurchaseSubmenuOpen(false);
-                              }}
+                    }}
                               className={stockTabClass("before")}
                             >
                               <span>Add Stock List</span>
@@ -349,7 +349,7 @@ const Header: React.FC = () => {
                                 setMobileMenuOpen(false);
                                 setMobileStockSubmenuOpen(true);
                                 setMobilePurchaseSubmenuOpen(false);
-                              }}
+                    }}
                               className={stockTabClass("current")}
                             >
                               <span>Current Stock</span>
@@ -362,7 +362,7 @@ const Header: React.FC = () => {
                               setMobileMenuOpen(false);
                               setMobileStockSubmenuOpen(true);
                               setMobilePurchaseSubmenuOpen(false);
-                            }}
+                    }}
                             className={stockTabClass("available")}
                           >
                             <span>Available Stock</span>
@@ -373,7 +373,7 @@ const Header: React.FC = () => {
                               setMobileMenuOpen(false);
                               setMobileStockSubmenuOpen(true);
                               setMobilePurchaseSubmenuOpen(false);
-                            }}
+                    }}
                             className={stockTabClass("soldout")}
                           >
                             <span>Sold Out</span>
@@ -423,7 +423,7 @@ const Header: React.FC = () => {
                               setMobileMenuOpen(false);
                               setMobilePurchaseSubmenuOpen(true);
                               setMobileStockSubmenuOpen(false);
-                            }}
+                        }}
                             className={purchaseTabClass("lc_wise")}
                           >
                             <span>LC History</span>
@@ -434,7 +434,7 @@ const Header: React.FC = () => {
                               setMobileMenuOpen(false);
                               setMobilePurchaseSubmenuOpen(true);
                               setMobileStockSubmenuOpen(false);
-                            }}
+                        }}
                             className={purchaseTabClass("history")}
                           >
                             <span>History</span>
@@ -467,8 +467,8 @@ const Header: React.FC = () => {
                       </span>
                     )}
                   </Link>
-                );
-              })}
+                )
+                    })}
             </div>
           </div>
         )}

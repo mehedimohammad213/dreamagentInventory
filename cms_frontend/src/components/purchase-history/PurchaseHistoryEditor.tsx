@@ -186,7 +186,16 @@ const PurchaseHistoryEditor: React.FC = () => {
       }
     } catch (error) {
       console.error("Error saving purchase history:", error);
-      toast.error("Failed to save purchase history");
+      const data = (error as {
+        response?: { data?: { message?: string; errors?: Record<string, string[] | string> } };
+      })?.response?.data;
+      const firstError = data?.errors ? Object.values(data.errors)[0] : undefined;
+      const message = Array.isArray(firstError)
+        ? firstError[0]
+        : typeof firstError === "string"
+          ? firstError
+          : data?.message;
+      toast.error(message || "Failed to save purchase history");
     }
   };
 

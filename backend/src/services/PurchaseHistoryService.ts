@@ -133,6 +133,26 @@ async function validateCarIds(carIds) {
   return { ok: Object.keys(errors).length === 0, errors };
 }
 
+async function assertCarsNotAlreadyPurchased(carIds, exceptPurchaseId = null) {
+  if (!carIds?.length) return;
+
+  for (const carId of carIds) {
+    const result = await query(
+      `SELECT id FROM car_purchase_history
+       WHERE car_id = $1
+         AND ($2::int IS NULL OR purchase_history_id <> $2)
+       LIMIT 1`,
+      [carId, exceptPurchaseId]
+    );
+    if (result.rows.length) {
+      throw new ValidationError(
+        { car_ids: ['This chassis number is already available in the car list.'] },
+        'This chassis number is already available in the car list.'
+      );
+    }
+  }
+}
+
 function validatePurchasePayload(body) {
   const { ok, errors } = validate(body, {
     car_ids: 'nullable|string',
@@ -237,6 +257,7 @@ export async function createPurchaseHistory(body, files) {
   if (carIds) {
     const carCheck = await validateCarIds(carIds);
     if (!carCheck.ok) throw new ValidationError(carCheck.errors, 'Validation error');
+    await assertCarsNotAlreadyPurchased(carIds);
   }
 
   const data = pickPurchaseData(body);
@@ -292,6 +313,7 @@ export async function updatePurchaseHistory(id, body, files) {
     }
     const carCheck = await validateCarIds(carIds);
     if (!carCheck.ok) throw new ValidationError(carCheck.errors, 'Validation error');
+    await assertCarsNotAlreadyPurchased(carIds, purchaseHistory.id);
   }
 
   const data = pickPurchaseData(body);

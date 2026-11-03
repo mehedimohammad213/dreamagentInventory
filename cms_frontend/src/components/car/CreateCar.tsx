@@ -10,11 +10,20 @@ import { carApi, CreateCarData, CarFilterOptions } from "../../services/carApi";
 import { categoryApi, Category } from "../../services/categoryApi";
 import type { StockPageTab } from "../../components/stock/StockHeader";
 import { stockManagementPath } from "../../utils/stockNavigation";
+import { findCarByChassis } from "../../utils/findCarByChassis";
+import type { Car } from "../../services/carApi";
+import type { PurchasePageTab } from "../../utils/purchaseNavigation";
 
 const CreateCar: React.FC = () => {
   const navigate = useNavigate();
-  const navState = useNavigationState<{ prefilledChassisNo?: string; returnStockTab?: StockPageTab }>();
+  const navState = useNavigationState<{
+    prefilledChassisNo?: string;
+    returnStockTab?: StockPageTab;
+    afterCreate?: "purchase" | "payment";
+    returnPurchaseTab?: PurchasePageTab;
+  }>();
   const prefilledChassisNo = navState?.prefilledChassisNo;
+  const afterCreate = navState?.afterCreate;
   const [isLoading, setIsLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [filterOptions, setFilterOptions] = useState<CarFilterOptions | null>(null);
@@ -72,6 +81,27 @@ const CreateCar: React.FC = () => {
       console.log("Submitting car data:", formData);
       const response = await carApi.createCar(formData);
       console.log("Car creation response:", response);
+      const createdCar: Car | null =
+        response.data?.car ??
+        (prefilledChassisNo ? await findCarByChassis(prefilledChassisNo) : null);
+
+      if (afterCreate === "purchase" && createdCar) {
+        navigate("/admin/purchase-history/create", {
+          state: {
+            prefilledCar: createdCar,
+            returnPurchaseTab: navState?.returnPurchaseTab ?? "history",
+          },
+        });
+        return;
+      }
+
+      if (afterCreate === "payment" && createdCar) {
+        navigate("/admin/payment-history", {
+          state: { prefilledCar: createdCar },
+        });
+        return;
+      }
+
       const returnTab = navState?.returnStockTab ?? "before";
       navigate(stockManagementPath(returnTab), {
         state: { message: "Car created successfully!" },
@@ -119,8 +149,15 @@ const CreateCar: React.FC = () => {
   };
 
   const handleCancel = () => {
-    const returnTab = (navState)
-      ?.returnStockTab;
+    if (afterCreate === "purchase") {
+      navigate("/admin/purchase-history");
+      return;
+    }
+    if (afterCreate === "payment") {
+      navigate("/admin/payment-history");
+      return;
+    }
+    const returnTab = navState?.returnStockTab;
     navigate(stockManagementPath(returnTab));
   };
 

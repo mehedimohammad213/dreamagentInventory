@@ -75,6 +75,24 @@ async function validateCarId(carId) {
   return { ok: true, errors: {} };
 }
 
+async function assertCarNotAlreadyPaid(carId, exceptPaymentId = null) {
+  if (carId == null || carId === '') return;
+  const id = toInt(carId);
+  if (id == null) return;
+
+  let qb = PaymentHistory.query().where('car_id', id);
+  if (exceptPaymentId != null) {
+    qb = qb.where('id', '!=', exceptPaymentId);
+  }
+  const existing = await qb.first();
+  if (existing) {
+    throw new ValidationError(
+      { car_id: ['This chassis number is already available in the car list.'] },
+      'This chassis number is already available in the car list.'
+    );
+  }
+}
+
 function validateInstallments(installments, { isUpdate = false } = {}) {
   if (installments == null) return { ok: true, errors: {} };
 
@@ -223,6 +241,7 @@ export async function createPaymentHistory(body) {
 
   const carCheck = await validateCarId(parsedBody.car_id);
   if (!carCheck.ok) throw new ValidationError(carCheck.errors, 'Validation error');
+  await assertCarNotAlreadyPaid(parsedBody.car_id);
 
   const data = pickPaymentData(parsedBody);
 
@@ -274,6 +293,9 @@ export async function updatePaymentHistory(id, body) {
 
   const carCheck = await validateCarId(parsedBody.car_id);
   if (!carCheck.ok) throw new ValidationError(carCheck.errors, 'Validation error');
+  if (Object.prototype.hasOwnProperty.call(parsedBody, 'car_id')) {
+    await assertCarNotAlreadyPaid(parsedBody.car_id, paymentHistory.id);
+  }
 
   if (Object.prototype.hasOwnProperty.call(parsedBody, 'installments') && Array.isArray(parsedBody.installments)) {
     const ownershipCheck = await validateInstallmentOwnership(parsedBody.installments, paymentHistory.id);

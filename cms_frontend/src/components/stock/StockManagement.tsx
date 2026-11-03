@@ -23,8 +23,8 @@ import { stockApi, Stock } from "../../services/stockApi";
 import { carApi } from "../../services/carApi";
 import ChassisLookupModal from "@/components/common/ChassisLookupModal";
 import {
-  extractCarsFromResponse,
-  matchCarByChassis,
+  CHASSIS_ALREADY_IN_CAR_LIST,
+  chassisAlreadyExistsMessage,
 } from "@/utils/findCarByChassis";
 import {
   getEffectiveStockStatus,
@@ -150,12 +150,8 @@ const StockManagement: React.FC = () => {
   } = useStockManagement(stockScope);
 
   const handleChassisValidate = async (inputCleaned: string) => {
-    const response = await carApi.getCars({ search: inputCleaned });
-    const cars = extractCarsFromResponse(response);
-
-    if (matchCarByChassis(cars, inputCleaned)) {
-      return "This chassis number is already available in the car list.";
-    }
+    const alreadyListed = await chassisAlreadyExistsMessage(inputCleaned);
+    if (alreadyListed) return alreadyListed;
 
     const existsInStocks = allStocks.some(
       (s) =>
@@ -170,7 +166,7 @@ const StockManagement: React.FC = () => {
     );
 
     if (existsInStocks || existsInAvailable) {
-      return "This chassis number is already available in the car list.";
+      return CHASSIS_ALREADY_IN_CAR_LIST;
     }
 
     setShowChassisModal(false);

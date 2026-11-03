@@ -16,6 +16,18 @@ export function matchCarByChassis(cars: Car[], chassis: string): Car | undefined
 }
 
 export async function findCarByChassis(chassis: string): Promise<Car | null> {
-  const response = await carApi.getCars({ search: chassis.trim() });
+  const response = await carApi.getCars({ search: chassis.trim(), per_page: 200 });
   return matchCarByChassis(extractCarsFromResponse(response), chassis) ?? null;
+}
+
+/** Same message Add Stock List shows when a chassis is already on a car. */
+export const CHASSIS_ALREADY_IN_CAR_LIST =
+  "This chassis number is already available in the car list.";
+
+/** Returns the stock-list error when this chassis already belongs to a car. */
+export async function chassisAlreadyExistsMessage(
+  chassis: string
+): Promise<string | null> {
+  const existing = await findCarByChassis(chassis);
+  return existing ? CHASSIS_ALREADY_IN_CAR_LIST : null;
 }
