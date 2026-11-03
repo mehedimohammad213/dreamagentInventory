@@ -1,5 +1,6 @@
 import { carApi, Car, CarResponse } from "@/services/carApi";
 import { purchaseHistoryApi } from "@/services/purchaseHistoryApi";
+import { paymentHistoryApi } from "@/services/paymentHistoryApi";
 
 export function extractCarsFromResponse(response: CarResponse): Car[] {
   const cars = response.data?.data || response.data?.cars || [];
@@ -65,5 +66,24 @@ export async function chassisAlreadyExistsPurchaseMessage(
     return `This chassis number is already under LC ${lcNumbers.join(", ")}.`;
   }
 
+  return null;
+}
+
+/**
+ * Payment create popup: block only when this chassis already has a payment history.
+ */
+export async function chassisAlreadyHasPaymentMessage(
+  chassis: string
+): Promise<string | null> {
+  const existing = await findCarByChassis(chassis);
+  if (!existing) return null;
+
+  const response = await paymentHistoryApi.getPaymentHistories({
+    car_id: existing.id,
+    per_page: 1,
+  });
+  if ((response.data || []).length > 0) {
+    return "This chassis number already has a payment history.";
+  }
   return null;
 }

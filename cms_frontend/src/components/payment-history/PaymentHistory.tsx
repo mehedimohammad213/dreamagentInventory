@@ -19,29 +19,49 @@ import PaymentHistoryTable from "../../components/payment-history/PaymentHistory
 import DeleteConfirmationModal from "@/components/common/DeleteConfirmationModal";
 import ChassisLookupModal from "@/components/common/ChassisLookupModal";
 import Pagination from "../../components/common/Pagination";
-import { chassisAlreadyExistsMessage } from "@/utils/findCarByChassis";
+import {
+  chassisAlreadyHasPaymentMessage,
+  findCarByChassis,
+} from "@/utils/findCarByChassis";
 import type { Car } from "@/services/carApi";
+
+function messageFromError(error: unknown, fallback: string) {
+  const data = (
+    error as {
+      response?: {
+        data?: { message?: string; errors?: Record<string, string[] | string> };
+      };
+    }
+  )?.response?.data;
+  const firstError = data?.errors ? Object.values(data.errors)[0] : undefined;
+  if (Array.isArray(firstError) && firstError[0]) return String(firstError[0]);
+  if (typeof firstError === "string") return firstError;
+  if (data?.message) return data.message;
+  return fallback;
+}
 
 const PaymentHistoryPage: React.FC = () => {
   const navigate = useNavigate();
-  const navState = useNavigationState<{ prefilledCar?: Car }>();
+  const navState = useNavigationState<{
+    prefilledCar?: Car;
+    editPaymentId?: number;
+  }>();
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [paymentHistories, setPaymentHistories] = useState<PaymentHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState<"create" | "update">("create");
-  const [selectedPaymentHistory, setSelectedPaymentHistory] = useState<PaymentHistory | null>(null);
+  const [selectedPaymentHistory, setSelectedPaymentHistory] =
+    useState<PaymentHistory | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [paymentHistoryToDelete, setPaymentHistoryToDelete] = useState<PaymentHistory | null>(null);
+  const [paymentHistoryToDelete, setPaymentHistoryToDelete] =
+    useState<PaymentHistory | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showChassisModal, setShowChassisModal] = useState(false);
   const [prefilledCar, setPrefilledCar] = useState<Car | null>(null);
 
-  // Filters
   const [searchTerm, setSearchTerm] = useState("");
-
-  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [perPage] = useState(15);
   const [totalPages, setTotalPages] = useState(1);
@@ -52,18 +72,46 @@ const PaymentHistoryPage: React.FC = () => {
   }, [currentPage, searchTerm]);
 
   useEffect(() => {
-    if (!navState?.prefilledCar || !isAdmin) return;
-    setPrefilledCar(navState.prefilledCar);
-    setSelectedPaymentHistory(null);
-    setModalMode("create");
-    setShowModal(true);
-    clearNavigationState();
+    if (!isAdmin || !navState) return;
+
+    if (navState.prefilledCar) {
+      setPrefilledCar(navState.prefilledCar);
+      setSelectedPaymentHistory(null);
+      setModalMode("create");
+      setShowModal(true);
+      clearNavigationState();
+      return;
+    }
+
+    if (navState.editPaymentId) {
+      const openEdit = async () => {
+        try {
+          const response = await paymentHistoryApi.getPaymentHistory(
+            navState.editPaymentId!
+          );
+          if (response.success && response.data) {
+            setPrefilledCar(null);
+            setSelectedPaymentHistory(response.data);
+            setModalMode("update");
+            setShowModal(true);
+          } else {
+            toast.error(response.message || "Payment history not found");
+          }
+        } catch (error) {
+          console.error("Error loading payment for edit:", error);
+          toast.error("Failed to load payment history");
+        } finally {
+          clearNavigationState();
+        }
+      };
+      openEdit();
+    }
   }, [navState, isAdmin]);
 
   const fetchPaymentHistories = async () => {
     try {
       setLoading(true);
-      const params: any = {
+      const params: Record<string, string | number> = {
         page: currentPage,
         per_page: perPage,
         sort_by: "created_at",
@@ -85,6 +133,13 @@ const PaymentHistoryPage: React.FC = () => {
     }
   };
 
+  const openCreateDrawer = (car: Car) => {
+    setPrefilledCar(car);
+    setSelectedPaymentHistory(null);
+    setModalMode("create");
+    setShowModal(true);
+  };
+
   const handleCreate = () => {
     setPrefilledCar(null);
     setSelectedPaymentHistory(null);
@@ -92,16 +147,16 @@ const PaymentHistoryPage: React.FC = () => {
   };
 
   const handleChassisValidate = async (chassis: string) => {
-    const alreadyListed = await chassisAlreadyExistsMessage(chassis);
-    if (alreadyListed) return alreadyListed;
+    const car = await findCarByChassis(chassis);
+    if (!car) {
+      return "No vehicle found with this chassis number.";
+    }
+
+    const alreadyPaid = await chassisAlreadyHasPaymentMessage(chassis);
+    if (alreadyPaid) return alreadyPaid;
 
     setShowChassisModal(false);
-    navigate("/create-car", {
-      state: {
-        prefilledChassisNo: chassis,
-        afterCreate: "payment",
-      },
-    });
+    openCreateDrawer(car);
   };
 
   const handleView = (paymentHistory: PaymentHistory) => {
@@ -162,31 +217,23 @@ const PaymentHistoryPage: React.FC = () => {
         } else {
           toast.error(response.message || "Failed to update payment history");
         }
+        return;
+      }
+
+      const response = await paymentHistoryApi.createPaymentHistory(
+        data as CreatePaymentHistoryData
+      );
+      if (response.success) {
+        toast.success("Payment history created successfully");
+        setShowModal(false);
+        setPrefilledCar(null);
+        fetchPaymentHistories();
       } else {
-        const response = await paymentHistoryApi.createPaymentHistory(
-          data as CreatePaymentHistoryData
-        );
-        if (response.success) {
-          toast.success("Payment history created successfully");
-          setShowModal(false);
-          setPrefilledCar(null);
-          fetchPaymentHistories();
-        } else {
-          toast.error(response.message || "Failed to create payment history");
-        }
+        toast.error(response.message || "Failed to create payment history");
       }
     } catch (error) {
       console.error("Error saving payment history:", error);
-      const data = (error as {
-        response?: { data?: { message?: string; errors?: Record<string, string[] | string> } };
-      })?.response?.data;
-      const firstError = data?.errors ? Object.values(data.errors)[0] : undefined;
-      const message = Array.isArray(firstError)
-        ? firstError[0]
-        : typeof firstError === "string"
-          ? firstError
-          : data?.message;
-      toast.error(message || "Failed to save payment history");
+      toast.error(messageFromError(error, "Failed to save payment history"));
     }
   };
 
@@ -195,12 +242,10 @@ const PaymentHistoryPage: React.FC = () => {
     setCurrentPage(1);
   };
 
-
   return (
     <div className="min-h-screen">
       <div className="max-w-full mx-auto px-4 pb-6">
         <div className="bg-white rounded-2xl border border-gray-200 shadow-lg p-4 sm:p-6 mb-6">
-          {/* Header aligned with Stock page style */}
           <div className="p-0 mb-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
@@ -211,9 +256,7 @@ const PaymentHistoryPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Filters aligned with Stock page top section */}
           <div className="flex flex-col lg:flex-row gap-4 items-center">
-            {/* Search */}
             <div className="flex-1 relative w-full lg:w-auto">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
@@ -225,7 +268,6 @@ const PaymentHistoryPage: React.FC = () => {
               />
             </div>
 
-            {/* Clear Filters Button */}
             {searchTerm && (
               <button
                 onClick={handleClearFilters}
@@ -248,7 +290,6 @@ const PaymentHistoryPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Table matching CarTable style */}
         <PaymentHistoryTable
           paymentHistories={paymentHistories}
           isLoading={loading}
@@ -259,7 +300,6 @@ const PaymentHistoryPage: React.FC = () => {
           onRefresh={fetchPaymentHistories}
         />
 
-        {/* Pagination matching car page */}
         {totalItems > 0 && (
           <div className="mt-6">
             <Pagination

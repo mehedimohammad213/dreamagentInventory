@@ -30,6 +30,10 @@ import {
 import DeleteConfirmationModal from "@/components/common/DeleteConfirmationModal";
 import PaymentHistoryModal from "../../components/payment-history/PaymentHistoryModal";
 import { PaymentHistoryInvoiceService } from "../../services/paymentHistoryInvoiceService";
+import type {
+  CreatePaymentHistoryData,
+  UpdatePaymentHistoryData,
+} from "../../services/paymentHistoryApi";
 
 const PaymentHistoryDetails: React.FC = () => {
   const navigate = useNavigate();
@@ -90,11 +94,6 @@ const PaymentHistoryDetails: React.FC = () => {
       setIsDeleting(false);
       setShowDeleteModal(false);
     }
-  };
-
-  const handleEditSuccess = () => {
-    setShowEditModal(false);
-    navigate("/admin/payment-history");
   };
 
   const handleDownloadInvoice = () => {
@@ -547,25 +546,25 @@ const PaymentHistoryDetails: React.FC = () => {
             mode="update"
             paymentHistory={paymentHistory}
             onClose={() => setShowEditModal(false)}
-            onSubmit={async (data) => {
-              if (paymentHistory) {
-                try {
-                  const response = await paymentHistoryApi.updatePaymentHistory(
-                    paymentHistory.id,
-                    data as any
+            onSubmit={async (data: CreatePaymentHistoryData | UpdatePaymentHistoryData) => {
+              if (!paymentHistory) return;
+              try {
+                const response = await paymentHistoryApi.updatePaymentHistory(
+                  paymentHistory.id,
+                  data as UpdatePaymentHistoryData
+                );
+                if (response.success) {
+                  toast.success("Payment history updated successfully");
+                  setShowEditModal(false);
+                  fetchPaymentHistory();
+                } else {
+                  toast.error(
+                    response.message || "Failed to update payment history"
                   );
-                  if (response.success) {
-                    toast.success("Payment history updated successfully");
-                    handleEditSuccess();
-                  } else {
-                    toast.error(
-                      response.message || "Failed to update payment history"
-                    );
-                  }
-                } catch (error) {
-                  console.error("Error updating payment history:", error);
-                  toast.error("Failed to update payment history");
                 }
+              } catch (error) {
+                console.error("Error updating payment history:", error);
+                toast.error("Failed to update payment history");
               }
             }}
           />

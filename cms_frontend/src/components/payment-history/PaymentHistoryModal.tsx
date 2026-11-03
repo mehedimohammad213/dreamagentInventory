@@ -19,6 +19,8 @@ interface PaymentHistoryModalProps {
   onLookupChassis?: (chassis: string) => Promise<string | void>;
   onClose: () => void;
   onSubmit: (data: CreatePaymentHistoryData | UpdatePaymentHistoryData) => void;
+  /** Full-page layout (no overlay); use with dedicated add/edit routes */
+  variant?: "modal" | "page";
 }
 
 const PaymentHistoryModal: React.FC<PaymentHistoryModalProps> = ({
@@ -29,7 +31,10 @@ const PaymentHistoryModal: React.FC<PaymentHistoryModalProps> = ({
   onLookupChassis,
   onClose,
   onSubmit,
+  variant = "modal",
 }) => {
+  const isPage = variant === "page";
+  const effectiveOpen = isPage || isOpen;
   const formatDateForInput = (value: string | null | undefined): string | null => {
     if (!value) return null;
     // If already YYYY-MM-DD, return as is
@@ -66,16 +71,16 @@ const PaymentHistoryModal: React.FC<PaymentHistoryModalProps> = ({
     mode === "create" && !initialCar && Boolean(onLookupChassis);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!effectiveOpen) return;
     setChassisInput("");
     setChassisError("");
     setIsCheckingChassis(false);
     fetchCars();
     fetchBankAccounts();
-  }, [isOpen]);
+  }, [effectiveOpen]);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!effectiveOpen || isPage) return;
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -89,10 +94,10 @@ const PaymentHistoryModal: React.FC<PaymentHistoryModalProps> = ({
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", onKey);
     };
-  }, [isOpen, onClose]);
+  }, [effectiveOpen, isPage, onClose]);
 
   useEffect(() => {
-    if (paymentHistory && mode === "update" && isOpen) {
+    if (paymentHistory && mode === "update" && effectiveOpen) {
       setFormData({
         car_id: paymentHistory.car_id,
         showroom_name: paymentHistory.showroom_name,
@@ -138,7 +143,7 @@ const PaymentHistoryModal: React.FC<PaymentHistoryModalProps> = ({
       } else {
         setInstallments([]);
       }
-    } else if (isOpen) {
+    } else if (effectiveOpen) {
       // Reset form for create mode
       setFormData({
         car_id: initialCar?.id ?? null,
@@ -156,7 +161,7 @@ const PaymentHistoryModal: React.FC<PaymentHistoryModalProps> = ({
       });
       setInstallments([]);
     }
-  }, [paymentHistory, mode, isOpen, initialCar]);
+  }, [paymentHistory, mode, effectiveOpen, initialCar]);
 
   const fetchCars = async () => {
     try {
@@ -347,36 +352,44 @@ const PaymentHistoryModal: React.FC<PaymentHistoryModalProps> = ({
     }
   };
 
-  if (!isOpen) return null;
+  if (!effectiveOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50">
-      <div
-        className="absolute inset-0 bg-black/40"
-        onClick={onClose}
-        role="presentation"
-      />
+    <div className={isPage ? "px-0 sm:px-8" : "fixed inset-0 z-50"}>
+      {!isPage && (
+        <div
+          className="absolute inset-0 bg-black/40"
+          onClick={onClose}
+          role="presentation"
+        />
+      )}
       <div
         role="dialog"
-        aria-modal="true"
+        aria-modal={!isPage}
         aria-labelledby="payment-history-drawer-title"
-        className="absolute inset-y-0 right-0 flex h-full w-full max-w-xl flex-col bg-white shadow-2xl"
+        className={
+          isPage
+            ? "relative mx-auto flex w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800"
+            : "absolute inset-y-0 right-0 flex h-full w-full max-w-xl flex-col bg-white shadow-2xl"
+        }
       >
-        <div className="flex flex-shrink-0 items-center justify-between border-b border-gray-200 px-5 py-4">
+        <div className="flex flex-shrink-0 items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-700">
           <h2
             id="payment-history-drawer-title"
-            className="text-lg font-semibold text-gray-900"
+            className="text-lg font-semibold text-gray-900 dark:text-white"
           >
             {mode === "create" ? "Add Payment History" : "Update Payment History"}
           </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-full p-2 text-gray-500 transition-colors hover:bg-gray-100"
-            aria-label="Close"
-          >
-            <X className="h-5 w-5" />
-          </button>
+          {!isPage && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-full p-2 text-gray-500 transition-colors hover:bg-gray-100"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          )}
         </div>
 
         <form
