@@ -370,7 +370,7 @@ const PaymentHistoryModal: React.FC<PaymentHistoryModalProps> = ({
         className={
           isPage
             ? "relative mx-auto flex w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800"
-            : "absolute inset-y-0 right-0 flex h-full w-full max-w-xl flex-col bg-white shadow-2xl"
+            : "absolute inset-y-0 right-0 flex h-full w-full max-w-3xl flex-col bg-white shadow-2xl"
         }
       >
         <div className="flex flex-shrink-0 items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-700">
