@@ -210,34 +210,21 @@ const PurchaseHistoryPage: React.FC = () => {
   };
 
   const handleChassisValidate = async (chassis: string) => {
-    // Add under an existing LC still needs a car already in the list.
-    if (pendingLcTemplate) {
-      const car = await findCarByChassis(chassis);
-      if (!car) {
-        return "No vehicle found with this chassis number.";
-      }
-
-      setShowChassisModal(false);
-      navigate("/admin/purchase-history/create", {
-        state: {
-          returnPurchaseTab: activeTab,
-          prefilledCar: car,
-          lcTemplate: pendingLcTemplate,
-        },
-      });
-      return;
+    const car = await findCarByChassis(chassis);
+    if (!car) {
+      return "No vehicle found with this chassis number.";
     }
 
-    // Existing chassis cannot be created again; show LC name when known.
-    const alreadyListed = await chassisAlreadyExistsPurchaseMessage(chassis);
-    if (alreadyListed) return alreadyListed;
+    // Block only when this chassis is already tied to an LC/purchase.
+    const alreadyPurchased = await chassisAlreadyExistsPurchaseMessage(chassis);
+    if (alreadyPurchased) return alreadyPurchased;
 
     setShowChassisModal(false);
-    navigate("/create-car", {
+    navigate("/admin/purchase-history/add", {
       state: {
-        prefilledChassisNo: chassis,
-        afterCreate: "purchase",
         returnPurchaseTab: activeTab,
+        prefilledCar: car,
+        ...(pendingLcTemplate ? { lcTemplate: pendingLcTemplate } : {}),
       },
     });
   };

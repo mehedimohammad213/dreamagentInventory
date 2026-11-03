@@ -86,7 +86,7 @@ const CreateCar: React.FC = () => {
         (prefilledChassisNo ? await findCarByChassis(prefilledChassisNo) : null);
 
       if (afterCreate === "purchase" && createdCar) {
-        navigate("/admin/purchase-history/create", {
+        navigate("/admin/purchase-history/add", {
           state: {
             prefilledCar: createdCar,
             returnPurchaseTab: navState?.returnPurchaseTab ?? "history",

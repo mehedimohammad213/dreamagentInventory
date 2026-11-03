@@ -48,7 +48,8 @@ export async function chassisAlreadyExistsMessage(
 }
 
 /**
- * Purchase create popup: if chassis exists, show its LC name when available.
+ * Purchase create popup: block only when this chassis already has an LC/purchase.
+ * Existing cars without a purchase are allowed through to the purchase add page.
  */
 export async function chassisAlreadyExistsPurchaseMessage(
   chassis: string
@@ -64,5 +65,5 @@ export async function chassisAlreadyExistsPurchaseMessage(
     return `This chassis number is already under LC ${lcNumbers.join(", ")}.`;
   }
 
-  return CHASSIS_ALREADY_IN_CAR_LIST;
+  return null;
 }
