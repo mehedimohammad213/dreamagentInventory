@@ -17,7 +17,6 @@ import {
   UsersIcon,
   CreditCard,
   Landmark,
-  Calculator,
 } from "lucide-react";
 import type { StockPageTab } from "@/components/stock/StockHeader";
 
@@ -72,14 +71,19 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
       ? (purchaseTabParam as PurchaseTab)
       : "lc_wise";
 
+  const isOnAccountRoute =
+    pathname === "/admin/accounts" || pathname === "/admin/accounting";
+  type AccountChild = "bank" | "balance_history";
+  const [accountSubmenuOpen, setAccountSubmenuOpen] = useState(isOnAccountRoute);
+  const effectiveAccountChild: AccountChild =
+    pathname === "/admin/accounting" ? "balance_history" : "bank";
 
   const adminNavItems: NavItem[] = [
     { path: "/admin", label: "Dashboard", icon: BarChartIcon },
     { path: "/admin/stock", label: "Stock", icon: PackageIcon },
     { path: "/admin/purchase-history", label: "Purchase", icon: BdtIcon },
     { path: "/admin/payment-history", label: "Payment", icon: CreditCard },
-    { path: "/admin/accounts", label: "Accounts", icon: Landmark },
-    { path: "/admin/accounting", label: "Accounting", icon: Calculator },
+    { path: "/admin/accounts", label: "Account", icon: Landmark },
     // { path: "/admin/orders", label: "Orders", icon: ShoppingCartIcon },
     { path: "/admin/users", label: "Users", icon: UsersIcon },
   ];
@@ -89,8 +93,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
   ];
 
   const accountantNavItems: NavItem[] = [
-    { path: "/admin/accounts", label: "Accounts", icon: Landmark },
-    { path: "/admin/accounting", label: "Accounting", icon: Calculator },
+    { path: "/admin/accounts", label: "Account", icon: Landmark },
   ];
 
   const navItems =
@@ -104,7 +107,8 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
     // Keep only the current route submenu open.
     setStockSubmenuOpen(isOnStockRoute);
     setPurchaseSubmenuOpen(isOnPurchaseRoute);
-  }, [isOnStockRoute, isOnPurchaseRoute]);
+    setAccountSubmenuOpen(isOnAccountRoute);
+  }, [isOnStockRoute, isOnPurchaseRoute, isOnAccountRoute]);
 
   return (
     <aside
@@ -177,6 +181,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
                     onClick={() => {
                       setStockSubmenuOpen((v) => !v);
                       setPurchaseSubmenuOpen(false);
+                      setAccountSubmenuOpen(false);
                     }}
                     className={`flex items-center w-full transition-colors py-2 rounded-none ${collapsed
                       ? "justify-center px-0 border-l-0"
@@ -212,6 +217,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
                           onClick={() => {
                             setStockSubmenuOpen(true);
                             setPurchaseSubmenuOpen(false);
+                            setAccountSubmenuOpen(false);
                     }}
                         >
                           <span className="truncate">All Stock</span>
@@ -224,6 +230,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
                           onClick={() => {
                             setStockSubmenuOpen(true);
                             setPurchaseSubmenuOpen(false);
+                            setAccountSubmenuOpen(false);
                     }}
                         >
                           <span className="truncate">Add Stock List</span>
@@ -236,33 +243,12 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
                           onClick={() => {
                             setStockSubmenuOpen(true);
                             setPurchaseSubmenuOpen(false);
+                            setAccountSubmenuOpen(false);
                     }}
                         >
                           <span className="truncate">Current Stock</span>
                         </Link>
                       )}
-                      {/* Available / Sold Out tabs hidden
-                      <Link
-                        href="/admin/stock?tab=available"
-                        className={stockTabLinkClasses("available")}
-                        onClick={() => {
-                          setStockSubmenuOpen(true);
-                          setPurchaseSubmenuOpen(false);
-                    }}
-                      >
-                        <span className="truncate">Available Stock</span>
-                      </Link>
-                      <Link
-                        href="/admin/stock?tab=soldout"
-                        className={stockTabLinkClasses("soldout")}
-                        onClick={() => {
-                          setStockSubmenuOpen(true);
-                          setPurchaseSubmenuOpen(false);
-                    }}
-                      >
-                        <span className="truncate">Sold Out</span>
-                      </Link>
-                      */}
                     </div>
                   )}
                 </div>
@@ -289,6 +275,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
                     onClick={() => {
                       setPurchaseSubmenuOpen((v) => !v);
                       setStockSubmenuOpen(false);
+                      setAccountSubmenuOpen(false);
                     }}
                     className={`flex items-center w-full transition-colors py-2 rounded-none ${collapsed
                       ? "justify-center px-0 border-l-0"
@@ -323,6 +310,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
                         onClick={() => {
                           setPurchaseSubmenuOpen(true);
                           setStockSubmenuOpen(false);
+                          setAccountSubmenuOpen(false);
                     }}
                       >
                         <span className="truncate">LC History</span>
@@ -333,9 +321,84 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
                         onClick={() => {
                           setPurchaseSubmenuOpen(true);
                           setStockSubmenuOpen(false);
+                          setAccountSubmenuOpen(false);
                     }}
                       >
                         <span className="truncate">Purchase History</span>
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            // Custom "Account" submenu: Bank + Balance History
+            if (item.path === "/admin/accounts") {
+              const accountChildLinkClasses = (child: AccountChild) =>
+                `flex items-center w-full transition-colors py-2 rounded-none ${collapsed
+                  ? "justify-center px-0 border-l-0"
+                  : "justify-start gap-3 px-3 border-l-4 border-transparent"
+                } ${effectiveAccountChild === child
+                  ? "bg-primary-50 text-primary-700 dark:bg-primary-900 dark:text-blue-200 border-primary-500"
+                  : "text-gray-700 hover:text-gray-900 dark:text-gray-200 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800"
+                }`;
+
+              return (
+                <div key={item.path}>
+                  <Link
+                    href="/admin/accounts"
+                    onClick={() => {
+                      setAccountSubmenuOpen((v) => !v);
+                      setStockSubmenuOpen(false);
+                      setPurchaseSubmenuOpen(false);
+                    }}
+                    className={`flex items-center w-full transition-colors py-2 rounded-none ${collapsed
+                      ? "justify-center px-0 border-l-0"
+                      : "justify-start gap-3 px-3 border-l-4 border-transparent"
+                      } ${isOnAccountRoute
+                        ? collapsed
+                          ? "bg-primary-50 text-primary-700 dark:bg-primary-900 dark:text-blue-200"
+                          : "bg-primary-50 text-primary-700 dark:bg-primary-900 dark:text-blue-200 border-primary-500"
+                        : collapsed
+                          ? "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+                          : "text-gray-700 hover:text-gray-900 dark:text-gray-200 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800"
+                      }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span className={`truncate ${collapsed ? "hidden" : "inline"}`}>
+                      {item.label}
+                    </span>
+                    {!collapsed && (
+                      <ChevronDown
+                        className={`ml-auto w-4 h-4 opacity-60 transform transition-transform ${accountSubmenuOpen ? "rotate-180" : ""
+                          }`}
+                      />
+                    )}
+                  </Link>
+
+                  {!collapsed && accountSubmenuOpen && (
+                    <div className="mt-1 flex flex-col gap-1 pl-7 pr-2">
+                      <Link
+                        href="/admin/accounts"
+                        className={accountChildLinkClasses("bank")}
+                        onClick={() => {
+                          setAccountSubmenuOpen(true);
+                          setStockSubmenuOpen(false);
+                          setPurchaseSubmenuOpen(false);
+                        }}
+                      >
+                        <span className="truncate">Bank</span>
+                      </Link>
+                      <Link
+                        href="/admin/accounting"
+                        className={accountChildLinkClasses("balance_history")}
+                        onClick={() => {
+                          setAccountSubmenuOpen(true);
+                          setStockSubmenuOpen(false);
+                          setPurchaseSubmenuOpen(false);
+                        }}
+                      >
+                        <span className="truncate">Balance History</span>
                       </Link>
                     </div>
                   )}
@@ -350,6 +413,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
                 onClick={() => {
                   setStockSubmenuOpen(false);
                   setPurchaseSubmenuOpen(false);
+                  setAccountSubmenuOpen(false);
                     }}
                 className={`flex items-center w-full transition-colors py-2 rounded-none ${collapsed
                   ? "justify-center px-0 border-l-0"

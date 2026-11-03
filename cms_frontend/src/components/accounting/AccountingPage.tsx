@@ -387,10 +387,10 @@ const AccountingPage: React.FC = () => {
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-semibold text-gray-900 dark:text-white">
             <Calculator className="h-6 w-6 text-primary-600" />
-            Accounting & Calculations
+            Balance History
           </h1>
           <p className="mt-1 text-sm text-gray-500">
-            Phase 1 + Phase 2: costs, collections, supplier pay, ledgers, cash book
+            Cost, collection, expenses, profit, cash book, and reports
           </p>
         </div>
         <div className="flex flex-wrap items-end gap-2">

@@ -191,10 +191,11 @@ const AccountsPage: React.FC = () => {
         <div>
           <h1 className="text-2xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
             <Landmark className="h-6 w-6 text-primary-600" />
-            Bank & Cash Accounts
+            Bank
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Total balance: <span className="font-semibold text-gray-800 dark:text-gray-100">{formatMoney(totalBalance)}</span>
+            Bank & cash accounts · Total balance:{" "}
+            <span className="font-semibold text-gray-800 dark:text-gray-100">{formatMoney(totalBalance)}</span>
           </p>
         </div>
         <div className="flex flex-wrap gap-2">

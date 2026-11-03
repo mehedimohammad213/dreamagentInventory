@@ -19,7 +19,6 @@ import {
   PackageIcon,
   UsersIcon,
   Landmark,
-  Calculator,
   SettingsIcon,
   ChevronDownIcon,
   FolderIcon,
@@ -63,6 +62,9 @@ const Header: React.FC = () => {
   );
   const [mobilePurchaseSubmenuOpen, setMobilePurchaseSubmenuOpen] = useState(
     pathname === "/admin/purchase-history"
+  );
+  const [mobileAccountSubmenuOpen, setMobileAccountSubmenuOpen] = useState(
+    pathname === "/admin/accounts" || pathname === "/admin/accounting"
   );
 
   // Handle clicking outside dropdowns and escape key
@@ -120,8 +122,7 @@ const Header: React.FC = () => {
       label: "Payment",
       icon: CreditCard,
     },
-    { path: "/admin/accounts", label: "Accounts", icon: Landmark },
-    { path: "/admin/accounting", label: "Accounting", icon: Calculator },
+    { path: "/admin/accounts", label: "Account", icon: Landmark },
     { path: "/admin/orders", label: "Order", icon: ShoppingCartIcon },
     { path: "/admin/users", label: "User", icon: UsersIcon },
   ];
@@ -131,8 +132,7 @@ const Header: React.FC = () => {
   ];
 
   const accountantNavItems: NavItem[] = [
-    { path: "/admin/accounts", label: "Accounts", icon: Landmark },
-    { path: "/admin/accounting", label: "Accounting", icon: Calculator },
+    { path: "/admin/accounts", label: "Account", icon: Landmark },
   ];
   const navItems =
     user?.role === "admin"
@@ -158,17 +158,27 @@ const Header: React.FC = () => {
     if (pathname === "/admin/stock") {
       setMobileStockSubmenuOpen(true);
       setMobilePurchaseSubmenuOpen(false);
+      setMobileAccountSubmenuOpen(false);
       return;
     }
 
     if (pathname === "/admin/purchase-history") {
       setMobilePurchaseSubmenuOpen(true);
       setMobileStockSubmenuOpen(false);
+      setMobileAccountSubmenuOpen(false);
+      return;
+    }
+
+    if (pathname === "/admin/accounts" || pathname === "/admin/accounting") {
+      setMobileAccountSubmenuOpen(true);
+      setMobileStockSubmenuOpen(false);
+      setMobilePurchaseSubmenuOpen(false);
       return;
     }
 
     setMobileStockSubmenuOpen(false);
     setMobilePurchaseSubmenuOpen(false);
+    setMobileAccountSubmenuOpen(false);
                     }, [pathname]);
 
   type PurchaseTab = "lc_wise" | "history";
@@ -414,6 +424,7 @@ const Header: React.FC = () => {
                         onClick={() => {
                           setMobilePurchaseSubmenuOpen((v) => !v);
                           setMobileStockSubmenuOpen(false);
+                          setMobileAccountSubmenuOpen(false);
                         }}
                         className={`flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium transition-colors ${isActiveRoute
                           ? "bg-primary-50 text-primary-700 dark:bg-primary-900 dark:text-blue-200"
@@ -436,6 +447,7 @@ const Header: React.FC = () => {
                               setMobileMenuOpen(false);
                               setMobilePurchaseSubmenuOpen(true);
                               setMobileStockSubmenuOpen(false);
+                              setMobileAccountSubmenuOpen(false);
                         }}
                             className={purchaseTabClass("lc_wise")}
                           >
@@ -447,10 +459,75 @@ const Header: React.FC = () => {
                               setMobileMenuOpen(false);
                               setMobilePurchaseSubmenuOpen(true);
                               setMobileStockSubmenuOpen(false);
+                              setMobileAccountSubmenuOpen(false);
                         }}
                             className={purchaseTabClass("history")}
                           >
                             <span>History</span>
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
+                // Custom "Account" submenu: Bank + Balance History
+                if (item.path === "/admin/accounts") {
+                  const isAccountRoute =
+                    pathname === "/admin/accounts" || pathname === "/admin/accounting";
+                  const accountChildClass = (active: boolean) =>
+                    `flex items-center space-x-2 w-full px-3 py-2 rounded-md text-base font-medium transition-colors ${active
+                      ? "bg-primary-50 text-primary-700 dark:bg-primary-900 dark:text-blue-200"
+                      : "text-gray-700 hover:text-gray-900 dark:text-gray-200 dark:hover:text-white"
+                    }`;
+
+                  return (
+                    <div key={item.path}>
+                      <Link
+                        href="/admin/accounts"
+                        onClick={() => {
+                          setMobileAccountSubmenuOpen((v) => !v);
+                          setMobileStockSubmenuOpen(false);
+                          setMobilePurchaseSubmenuOpen(false);
+                        }}
+                        className={`flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium transition-colors ${isAccountRoute
+                          ? "bg-primary-50 text-primary-700 dark:bg-primary-900 dark:text-blue-200"
+                          : "text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+                          }`}
+                      >
+                        <Icon className="h-5 w-5" />
+                        <span>{item.label}</span>
+                        <ChevronDownIcon
+                          className={`ml-auto h-4 w-4 opacity-60 transform transition-transform ${mobileAccountSubmenuOpen ? "rotate-180" : ""
+                            }`}
+                        />
+                      </Link>
+
+                      {mobileAccountSubmenuOpen && (
+                        <div className="ml-5 mt-1 flex flex-col gap-1">
+                          <Link
+                            href="/admin/accounts"
+                            onClick={() => {
+                              setMobileMenuOpen(false);
+                              setMobileAccountSubmenuOpen(true);
+                              setMobileStockSubmenuOpen(false);
+                              setMobilePurchaseSubmenuOpen(false);
+                            }}
+                            className={accountChildClass(pathname === "/admin/accounts")}
+                          >
+                            <span>Bank</span>
+                          </Link>
+                          <Link
+                            href="/admin/accounting"
+                            onClick={() => {
+                              setMobileMenuOpen(false);
+                              setMobileAccountSubmenuOpen(true);
+                              setMobileStockSubmenuOpen(false);
+                              setMobilePurchaseSubmenuOpen(false);
+                            }}
+                            className={accountChildClass(pathname === "/admin/accounting")}
+                          >
+                            <span>Balance History</span>
                           </Link>
                         </div>
                       )}
@@ -466,6 +543,7 @@ const Header: React.FC = () => {
                       setMobileMenuOpen(false);
                       setMobileStockSubmenuOpen(false);
                       setMobilePurchaseSubmenuOpen(false);
+                      setMobileAccountSubmenuOpen(false);
                     }}
                     className={`flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium transition-colors ${isActiveRoute
                       ? "bg-primary-50 text-primary-700 dark:bg-primary-900 dark:text-blue-200"
