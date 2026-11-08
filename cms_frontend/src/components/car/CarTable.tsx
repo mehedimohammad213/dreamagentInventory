@@ -141,7 +141,9 @@ const CarTable: React.FC<CarTableProps> = ({
                             car.status
                           )}`}
                         >
-                          {car.status?.charAt(0).toUpperCase() + car.status?.slice(1)}
+                          {car.status?.toLowerCase() === "reserved"
+                            ? "Booked"
+                            : car.status?.charAt(0).toUpperCase() + car.status?.slice(1)}
                         </span>
                         {car.package && (
                           <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-md text-xs font-semibold bg-primary-50 text-primary-700 border border-primary-200">

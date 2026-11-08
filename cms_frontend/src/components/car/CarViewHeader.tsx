@@ -55,7 +55,12 @@ const CarViewHeader: React.FC<CarViewHeaderProps> = ({
                 car.status
               )}`}
             >
-              {(car.status?.replace(/_/g, " ") || "N/A").toUpperCase()}
+              {(
+                (car.status?.toLowerCase() === "reserved" ? "booked" : car.status)?.replace(
+                  /_/g,
+                  " "
+                ) || "N/A"
+              ).toUpperCase()}
             </span>
           </div>
         )}

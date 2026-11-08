@@ -23,7 +23,7 @@ const LocationStatusSection: React.FC<LocationStatusSectionProps> = ({
     { value: "pending", label: "Pending" },
     { value: "available", label: "Available" },
     { value: "sold", label: "Sold" },
-    { value: "reserved", label: "Reserved" },
+    { value: "reserved", label: "Booked" },
     { value: "in_transit", label: "In Transit" },
     { value: "preorder", label: "Preorder" },
   ];

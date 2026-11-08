@@ -105,7 +105,7 @@ export function getStatusSortRank(status: string): number {
 export const STATUS_SECTION_LABELS: Record<string, string> = {
   pending: "Pending",
   available: "Available",
-  reserved: "Reserved",
+  reserved: "Booked",
   in_transit: "In Transit",
   preorder: "Preorder",
   damaged: "Damaged",

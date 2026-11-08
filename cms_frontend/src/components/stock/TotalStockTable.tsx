@@ -445,7 +445,9 @@ const TotalStockTable: React.FC = () => {
                         : "bg-gray-100 text-gray-700 border border-gray-200"
                     }`}
                   >
-                    {car.status || "N/A"}
+                    {car.status?.toLowerCase() === "reserved"
+                      ? "Booked"
+                      : car.status || "N/A"}
                   </span>
                 </div>
 

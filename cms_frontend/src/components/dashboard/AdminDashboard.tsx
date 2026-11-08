@@ -410,7 +410,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                     },
                                     {
                                         key: "reserved",
-                                        label: "Reserved",
+                                        label: "Booked",
                                         bgColor: "bg-teal-50/50 dark:bg-teal-950/10",
                                         borderColor: "border-teal-100/50 dark:border-teal-900/20",
                                         textColor: "text-teal-600 dark:text-teal-400"

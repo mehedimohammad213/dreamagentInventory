@@ -40,7 +40,7 @@ export const StockStatusBadges: React.FC<StockStatusBadgesProps> = ({
       )}
       {effectiveStatus === "reserved" && (
         <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">
-          Reserved
+          Booked
         </span>
       )}
       {effectiveStatus === "pending" && (

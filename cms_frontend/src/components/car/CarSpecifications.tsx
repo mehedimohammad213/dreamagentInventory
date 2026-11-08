@@ -107,7 +107,9 @@ const CarSpecifications: React.FC<CarSpecificationsProps> = ({
             )}`}
           >
             {car.status
-              ? car.status.charAt(0).toUpperCase() + car.status.slice(1)
+              ? car.status.toLowerCase() === "reserved"
+                ? "Booked"
+                : car.status.charAt(0).toUpperCase() + car.status.slice(1)
               : "N/A"}
           </span>
         ),
