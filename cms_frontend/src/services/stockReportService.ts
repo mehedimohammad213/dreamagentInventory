@@ -9,7 +9,7 @@ import {
 const LOGO_VIEWBOX_WIDTH = 2500;
 const LOGO_VIEWBOX_HEIGHT = 540;
 
-async function loadLogoPngDataUrl(): Promise<string | null> {
+async function loadLogoJpegDataUrl(): Promise<string | null> {
     try {
         const response = await fetch("/logo.svg");
         if (!response.ok) return null;
@@ -37,8 +37,12 @@ async function loadLogoPngDataUrl(): Promise<string | null> {
                     reject(new Error("Canvas context unavailable"));
                     return;
                 }
+                // White fill avoids transparent SVG pixels becoming black in jsPDF
+                // (especially on page 2+ when PNG soft-masks leak across pages).
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(0, 0, LOGO_VIEWBOX_WIDTH, LOGO_VIEWBOX_HEIGHT);
                 ctx.drawImage(img, 0, 0, LOGO_VIEWBOX_WIDTH, LOGO_VIEWBOX_HEIGHT);
-                resolve(canvas.toDataURL("image/png"));
+                resolve(canvas.toDataURL("image/jpeg", 1.0));
             };
             img.onerror = () => reject(new Error("Failed to load logo SVG"));
             img.src = `data:image/svg+xml;charset=utf-8,${encoded}`;
@@ -73,7 +77,7 @@ export const StockReportService = {
         const month = months[now.getMonth()];
         const year = now.getFullYear();
         const dateStr = `STOCK LIST DATE: ${day} ${month} ${year}`;
-        const logoDataUrl = await loadLogoPngDataUrl();
+        const logoDataUrl = await loadLogoJpegDataUrl();
         const logoWidth = 80;
         const logoHeight = logoWidth * (LOGO_VIEWBOX_HEIGHT / LOGO_VIEWBOX_WIDTH);
         const logoTop = 6;
@@ -85,11 +89,17 @@ export const StockReportService = {
         const headerBottom = stockListY + 6;
 
         const drawHeader = () => {
+            // Clear header band so logo/image state cannot leave a dark fill on later pages.
+            doc.setFillColor(255, 255, 255);
+            doc.rect(0, 0, pageWidth, headerBottom, "F");
+            doc.setDrawColor(0, 0, 0);
+            doc.setTextColor(0, 0, 0);
+
             if (logoDataUrl) {
                 try {
                     doc.addImage(
                         logoDataUrl,
-                        "PNG",
+                        "JPEG",
                         (pageWidth - logoWidth) / 2,
                         logoTop,
                         logoWidth,
@@ -110,6 +120,7 @@ export const StockReportService = {
 
             doc.setFontSize(10);
             doc.setFont("helvetica", "normal");
+            doc.setTextColor(0, 0, 0);
             doc.text(
                 "57, Purana Palton Line, VIP Road, Dhaka-1000. Contact No : 01714211956",
                 pageWidth / 2,
